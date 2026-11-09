@@ -1,0 +1,47 @@
+# Machine-readable source registry. File entries (path, bytes, sha256, retrieved) are
+# appended by the download scripts. Verify with: python -m data.scripts.verify_manifest
+sources:
+  - name: sec_edgar
+    homepage: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+    terms: Public filings. Fair access policy applies (declared User-Agent, request rate limit).
+    destination: raw/edgar
+  - name: gleif
+    homepage: https://www.gleif.org/en/lei-data/gleif-golden-copy/download-the-golden-copy
+    terms: GLEIF LEI data terms of use (free, CC0 1.0 per GLEIF data license).
+    destination: raw/registry/gleif
+  - name: wikidata
+    homepage: https://www.wikidata.org
+    terms: CC0 1.0
+    destination: raw/knowledge_base/wikidata
+  - name: epa_echo
+    homepage: https://echo.epa.gov/tools/data-downloads
+    terms: US government data. Quality before November 2000 is unknown; use recent records only.
+    destination: raw/regulators/epa_echo
+  - name: osha
+    homepage: https://data.dol.gov/
+    terms: US government data. Access method recorded in docs/adr/ADR-003-osha-access.md.
+    destination: raw/regulators/osha
+  - name: nhtsa
+    homepage: https://www.nhtsa.gov/nhtsa-datasets-and-apis
+    terms: US government data. No terms stated on the datasets page; confirm before redistribution.
+    destination: raw/regulators/nhtsa
+  - name: cpsc
+    homepage: https://www.cpsc.gov/Recalls/CPSC-Recalls-Application-Program-Interface-API-Information
+    terms: US government API. Confirm terms before redistribution.
+    destination: raw/regulators/cpsc
+  - name: openfda
+    homepage: https://open.fda.gov/
+    terms: US government data. Confirm terms before redistribution.
+    destination: raw/regulators/fda
+  - name: gdelt
+    homepage: https://www.gdeltproject.org/
+    terms: Free for research use. Metadata only; publishers keep copyright.
+    destination: raw/news/gdelt
+  - name: cc_news
+    homepage: https://huggingface.co/datasets/intfloat/multilingual_cc_news
+    terms: Publisher copyright applies. Non-commercial testing only. Show title, snippet, link.
+    destination: raw/news/cc_news
+  - name: mewsli_x
+    homepage: https://huggingface.co/datasets/izhx/mewsli-x
+    terms: Apache-2.0 per dataset card.
+    destination: raw/eval/mewsli_x

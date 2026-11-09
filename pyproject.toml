@@ -1,0 +1,32 @@
+[project]
+name = "provenance-risk-data"
+version = "0.1.0"
+description = "Data acquisition scripts for the supplier risk intelligence platform"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx",
+  "pyyaml",
+  "beautifulsoup4",
+  "lxml",
+  "trafilatura",
+  "lingua-language-detector",
+  "pandas",
+  "pyarrow",
+  "duckdb",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true

@@ -1,0 +1,3 @@
+# Run the GDELT harvester every 3 hours. Install with: crontab infra/cron/gdelt.cron
+# Adjust the repository path. Environment variables are read from .env.
+0 */3 * * * cd /path/to/repo && set -a && . ./.env && set +a && .venv/bin/python -m data.scripts.harvest_gdelt >> data/raw/news/gdelt/harvest.log 2>&1

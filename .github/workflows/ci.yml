@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e . pytest pytest-cov ruff mypy types-PyYAML pip-audit
+      - run: python infra/ci/check_no_em_dash.py
+      - run: ruff check data tests infra
+      - run: mypy data/scripts
+      - run: PYTHONPATH=. pytest --cov=data.scripts
+      - run: pip-audit
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

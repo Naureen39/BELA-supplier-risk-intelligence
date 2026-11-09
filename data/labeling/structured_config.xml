@@ -1,0 +1,16 @@
+<View>
+  <Header value="Record"/>
+  <Text name="record" value="$record_text"/>
+  <Header value="Candidates"/>
+  <Choices name="company" toName="record" choice="single" showInline="false">
+    <!-- Choices are populated per task from $candidates through the task data. -->
+  </Choices>
+  <Choices name="nil" toName="record" choice="single">
+    <Choice value="NIL: no matching company"/>
+  </Choices>
+  <Choices name="flags" toName="record" choice="multiple">
+    <Choice value="Hard case"/>
+    <Choice value="Ambiguous"/>
+  </Choices>
+  <TextArea name="notes" toName="record" placeholder="Parent company, reasoning"/>
+</View>

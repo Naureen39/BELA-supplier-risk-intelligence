@@ -1,0 +1,15 @@
+<View>
+  <Text name="sentence" value="$sentence"/>
+  <Labels name="mention" toName="sentence">
+    <Label value="COMPANY" background="#2F74D8"/>
+  </Labels>
+  <Choices name="link" toName="sentence" choice="single">
+    <Choice value="Linked to company (enter identifier)"/>
+    <Choice value="NIL: no matching company"/>
+  </Choices>
+  <TextArea name="company_id" toName="sentence" placeholder="CIK, LEI, or Wikidata QID"/>
+  <Choices name="flags" toName="sentence" choice="multiple">
+    <Choice value="Hard case"/>
+    <Choice value="Ambiguous"/>
+  </Choices>
+</View>

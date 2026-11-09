@@ -1,0 +1,9 @@
+# Bulk file locations. Verify each URL against the publisher page before the first run;
+# publishers occasionally rename files.
+epa_echo:
+  echo_exporter: https://echo.epa.gov/files/echodownloads/echo_exporter.zip
+  frs_downloads: https://ordsext.epa.gov/FLA/www3/state_files/national_combined.zip
+  icis_fec: https://echo.epa.gov/files/echodownloads/case_downloads.zip
+nhtsa:
+  flat_recalls: https://static.nhtsa.gov/odi/ffdd/rcl/FLAT_RCL_POST_2010.zip
+  layout: https://static.nhtsa.gov/odi/ffdd/rcl/RCL.txt
