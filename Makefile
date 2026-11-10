@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 export PYTHONPATH := .
 
-.PHONY: training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -34,7 +34,7 @@ counts:
 	$(PY) -m data.scripts.verify_manifest --counts
 
 test:
-	PYTHONPATH=.:apps/api .venv/bin/python -m pytest --cov=data.scripts --cov=app.kb --cov=app.resolution --cov-report=term-missing
+	PYTHONPATH=.:apps/api .venv/bin/python -m pytest --cov=data.scripts --cov=app.kb --cov=app.resolution --cov=app.events --cov-report=term-missing
 
 # Phase 2: database. DATABASE_URL example: postgresql+psycopg://user:pw@localhost:5432/provenance
 migrate:
@@ -47,7 +47,7 @@ lint: check-dash
 	.venv/bin/ruff check apps data tests infra training services
 	.venv/bin/mypy -p data.scripts
 	.venv/bin/mypy services training
-	MYPYPATH=apps/api:. .venv/bin/mypy --strict -p app.kb -p app.resolution
+	MYPYPATH=apps/api:. .venv/bin/mypy --strict -p app.kb -p app.resolution -p app.events
 
 check-dash:
 	$(PY) infra/ci/check_no_em_dash.py
@@ -72,3 +72,10 @@ services-nel:
 
 services-blink:
 	.venv/bin/uvicorn services.blink.main:app --host 127.0.0.1 --port 8102
+
+# Phase 4: events. Example: make ingest-events SOURCE=osha FILE=data/raw/regulators/osha/violations.json
+ingest-events:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.events.ingest --source $(SOURCE) --path ../../$(FILE)
+
+eval-events:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.events.evaluation --gold ../../data/gold/events.jsonl --out ../../docs/eval/event_labeling.md

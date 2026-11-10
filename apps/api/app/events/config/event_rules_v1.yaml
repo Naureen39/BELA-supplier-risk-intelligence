@@ -1,0 +1,77 @@
+# Versioned mapping from regulator fields to event type and severity (1 to 4).
+# Field names follow the public data dictionaries as understood when this file was written.
+# Confirm each name against the current data dictionary before a production load: a wrong name
+# is reported by the normalizer as a missing field, never silently ignored.
+version: event_rules_v1
+min_year: 2015   # records older than this are not turned into events
+
+epa_echo:
+  fields:
+    registry_id: FAC_REGISTRY_ID
+    name: FAC_NAME
+    city: FAC_CITY
+    state: FAC_STATE
+    latitude: FAC_LAT
+    longitude: FAC_LONG
+    significant_noncompliance: FAC_SNC_FLG
+    formal_action_count: FAC_FORMAL_ACTION_COUNT
+    penalties: FAC_TOTAL_PENALTIES
+    last_action_date: FAC_DATE_LAST_FORMAL_ACTION
+  snc_base_severity: 2
+  penalty_bands: [[0, 1], [50000, 2], [250000, 3], [1000000, 4]]
+
+osha:
+  fields:
+    activity: activity_nr
+    name: estab_name
+    city: site_city
+    state: site_state
+    open_date: open_date
+    citation: citation_id
+    violation_type: viol_type
+    initial_penalty: initial_penalty
+    current_penalty: current_penalty
+    issuance_date: issuance_date
+  min_penalty: 5000          # citations below this amount do not create events
+  penalty_bands: [[0, 1], [15000, 2], [70000, 3], [150000, 4]]
+  violation_types: {S: serious, W: willful, R: repeat, O: other, U: unclassified}
+  bump_types: [W, R]         # willful and repeat classifications raise severity by one
+
+nhtsa:
+  fields:
+    campaign: CAMPNO
+    manufacturer: MFGNAME
+    component: COMPNAME
+    units: POTAFF
+    report_date: RCDATE
+    defect: DESC_DEFECT
+  units_bands: [[0, 1], [10000, 2], [100000, 3], [1000000, 4]]
+  critical_components: [air bag, brake, fuel, steering, tires, seat belt]
+
+cpsc:
+  fields:
+    id: RecallID
+    number: RecallNumber
+    date: RecallDate
+    title: Title
+    url: URL
+    hazards: Hazards
+    products: Products
+  hazard_keywords:
+    4: [fire, burn, death, fatal, electrocution, explosion, asphyxiation, drowning]
+    3: [injury, laceration, choking, strangulation, fall, entrapment, shock]
+  default_severity: 2
+  large_units: 100000        # recalls at or above this unit count raise severity by one
+
+openfda:
+  fields:
+    number: recall_number
+    firm: recalling_firm
+    classification: classification
+    reason: reason_for_recall
+    report_date: report_date
+    initiation_date: recall_initiation_date
+    city: city
+    state: state
+    event: event_id
+  class_severity: {"Class I": 4, "Class II": 3, "Class III": 2}

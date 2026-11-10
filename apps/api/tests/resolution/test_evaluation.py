@@ -63,5 +63,5 @@ def test_end_to_end_synthetic_eval_writes_report(tmp_path: Path) -> None:
                        "SYNTHETIC test")
     assert {"rapidfuzz_state_blocking", "fellegi_sunter_only", "hybrid_trigram_only"} <= set(results)
     report = (tmp_path / "report.md").read_text()
-    assert "SYNTHETIC" in report and "—" not in report
+    assert "SYNTHETIC" in report and chr(0x2014) not in report
     assert json.loads((tmp_path / "metrics.json").read_text())["systems"]
