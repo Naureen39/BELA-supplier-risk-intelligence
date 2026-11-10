@@ -1,0 +1,7 @@
+{
+  "repo": "",
+  "file": "",
+  "sha256": "",
+  "license_reviewed": false,
+  "note": "Not pinned yet. Spike C selects the build; run fetch_model.py with --record."
+}

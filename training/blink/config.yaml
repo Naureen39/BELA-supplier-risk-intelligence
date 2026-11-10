@@ -1,0 +1,42 @@
+# BLINK fine-tuning configuration for the company knowledge base.
+#
+# The command templates call the upstream BLINK scripts inside the isolated blink environment
+# (services/blink, ADR-002). Flag names below follow the upstream training documentation as
+# understood when this file was written and MUST be confirmed in spike B before the first run.
+# The orchestrator fails fast if a template references an unknown placeholder.
+data:
+  entities: data/training/entities.jsonl
+  train: data/training/train.jsonl
+  dev: data/training/dev.jsonl
+  test: data/training/test.jsonl
+output_dir: models/blink
+init:
+  biencoder: models/blink_pretrained/biencoder_wiki_large.bin
+  crossencoder: models/blink_pretrained/crossencoder_wiki_large.bin
+biencoder:
+  command: >-
+    python blink/biencoder/train_biencoder.py
+    --data_path {data_dir} --output_path {output_dir}/biencoder_{round}
+    --path_to_model {init_model} --learning_rate 1e-5 --num_train_epochs {epochs}
+    --train_batch_size {batch_size} --eval_batch_size 16 --max_context_length 128
+    --max_cand_length 128 --bert_model bert-large-uncased --eval_interval 2000
+    --gradient_accumulation_steps {accum} --fp16
+  epochs: 3
+  batch_size: 16
+  accum: 4
+  rounds: 2   # round 1 on random in-batch negatives, round 2 adds mined hard negatives
+  mine_k: 30
+crossencoder:
+  command: >-
+    python blink/crossencoder/train_cross.py
+    --data_path {data_dir} --output_path {output_dir}/crossencoder
+    --path_to_model {init_model} --learning_rate 2e-5 --num_train_epochs {epochs}
+    --train_batch_size {batch_size} --max_context_length 128 --max_cand_length 128
+    --bert_model bert-large-uncased --gradient_accumulation_steps {accum} --fp16
+  epochs: 2
+  batch_size: 2
+  accum: 16
+  top_k: 30   # cross-encoder trains on the bi-encoder's top-k candidates
+selection:
+  split: dev
+  metric: accuracy_at_1

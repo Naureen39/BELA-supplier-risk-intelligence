@@ -1,7 +1,7 @@
 PY := .venv/bin/python
 export PYTHONPATH := .
 
-.PHONY: setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -34,11 +34,41 @@ counts:
 	$(PY) -m data.scripts.verify_manifest --counts
 
 test:
-	$(PY) -m pytest --cov=data.scripts --cov-report=term-missing
+	PYTHONPATH=.:apps/api .venv/bin/python -m pytest --cov=data.scripts --cov=app.kb --cov=app.resolution --cov-report=term-missing
+
+# Phase 2: database. DATABASE_URL example: postgresql+psycopg://user:pw@localhost:5432/provenance
+migrate:
+	cd apps/api && ../../.venv/bin/alembic upgrade head
+
+etl:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.kb.pipeline
 
 lint: check-dash
-	.venv/bin/ruff check data tests infra
-	.venv/bin/mypy data/scripts
+	.venv/bin/ruff check apps data tests infra training services
+	.venv/bin/mypy -p data.scripts
+	.venv/bin/mypy services training
+	MYPYPATH=apps/api:. .venv/bin/mypy --strict -p app.kb -p app.resolution
 
 check-dash:
 	$(PY) infra/ci/check_no_em_dash.py
+
+# Phase 3: resolution engine. Requires DATABASE_URL (populated by make etl).
+training-data:
+	$(PY) -m data.scripts.generate_training_pairs
+
+fit:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.resolution.fit_cli --training-dir ../../data/training --out ../../models/scoring
+
+# GPU stages run through the isolated BLINK environment; see training/blink/config.yaml.
+train:
+	$(PY) -m training.train
+	$(MAKE) fit
+
+eval:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.resolution.evaluation.run --out ../../docs/eval
+
+services-nel:
+	.venv/bin/uvicorn services.nel.main:app --host 127.0.0.1 --port 8101
+
+services-blink:
+	.venv/bin/uvicorn services.blink.main:app --host 127.0.0.1 --port 8102

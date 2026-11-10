@@ -3,6 +3,16 @@ on: [push, pull_request]
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      TEST_DATABASE_ADMIN_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -10,9 +20,12 @@ jobs:
           python-version: "3.11"
       - run: pip install -e . pytest pytest-cov ruff mypy types-PyYAML pip-audit
       - run: python infra/ci/check_no_em_dash.py
-      - run: ruff check data tests infra
-      - run: mypy data/scripts
-      - run: PYTHONPATH=. pytest --cov=data.scripts
+      - run: ruff check apps data tests infra training services
+      - run: mypy -p data.scripts
+      - run: MYPYPATH=apps/api:. mypy --strict -p app.kb -p app.resolution
+      - run: mypy services training
+      - run: python -m training.train --dry-run
+      - run: PYTHONPATH=.:apps/api pytest --cov=app.kb --cov=app.resolution --cov-fail-under=80
       - run: pip-audit
       - uses: gitleaks/gitleaks-action@v2
         env:

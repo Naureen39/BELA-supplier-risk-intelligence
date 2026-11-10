@@ -13,11 +13,27 @@ dependencies = [
   "pandas",
   "pyarrow",
   "duckdb",
+  "sqlalchemy",
+  "alembic",
+  "psycopg[binary]",
+  "cleanco",
+  "usaddress",
+  "rapidfuzz",
+  "pandera",
+  "networkx",
+  "numpy",
+  "pydantic>=2",
+  "fastapi",
+  "uvicorn",
+  "prometheus-client",
 ]
 
+[project.optional-dependencies]
+models = ["sentence-transformers", "faiss-cpu", "huggingface-hub"]
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
+testpaths = ["tests", "apps/api/tests"]
+pythonpath = [".", "apps/api", "apps/api/tests/resolution"]
 
 [tool.ruff]
 line-length = 100

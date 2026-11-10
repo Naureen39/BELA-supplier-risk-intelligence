@@ -9,3 +9,5 @@ data/raw/
 data/processed/
 data/training/*.jsonl
 *.parquet
+.coverage
+models/
