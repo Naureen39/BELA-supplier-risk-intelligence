@@ -8,13 +8,18 @@ from app.routers import (
     auth,
     business,
     contact,
+    corrections,
     health,
     knowledge,
+    monitoring,
     platform,
     suppliers,
+    uploads,
 )
 
+# `uploads` precedes `suppliers` so /uploads/template wins over /uploads/{upload_id}.
 ROUTERS: list[APIRouter] = [
-    health.router, auth.router, admin.router, suppliers.router, knowledge.router, alerts.router,
-    business.router, platform.router, contact.router,
+    health.router, auth.router, admin.router, uploads.router, suppliers.router, corrections.router,
+    knowledge.router, alerts.router, business.router, monitoring.router, platform.router,
+    contact.router,
 ]

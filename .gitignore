@@ -11,3 +11,4 @@ data/training/*.jsonl
 *.parquet
 .coverage
 models/
+var/

@@ -12,6 +12,11 @@ from typing import Any
 from app.resolution.models import MentionLink, Resolution
 
 
+def _rid(row: Any) -> int:
+    """First column of a RETURNING row, for tuple or dict rows."""
+    return int(next(iter(row.values())) if isinstance(row, dict) else row[0])
+
+
 def persist_mention_links(conn: Any, article_id: int, links: Sequence[MentionLink]) -> list[int]:
     """Insert mentions and every candidate considered. Returns mention ids."""
     ids: list[int] = []
@@ -28,7 +33,7 @@ def persist_mention_links(conn: Any, article_id: int, links: Sequence[MentionLin
             (article_id, m.start, m.end, m.surface, m.qid, m.md_score, m.el_score, link.method,
              decision, model_version),
         ).fetchone()
-        mention_id = int(row[0])
+        mention_id = int(_rid(row))
         ids.append(mention_id)
         with conn.cursor() as cur:
             cur.executemany(

@@ -10,16 +10,7 @@ from app.container import Container
 from app.core import audit
 from app.core.errors import ApiError
 from app.core.pagination import clamp_limit, decode_cursor, encode_cursor
-
-
-def jsonable(row: dict[str, Any], drop: tuple[str, ...] = ()) -> dict[str, Any]:
-    """Row to a response dict: UUIDs as strings, selected columns removed."""
-    out: dict[str, Any] = {}
-    for k, v in row.items():
-        if k in drop:
-            continue
-        out[k] = str(v) if isinstance(v, uuid.UUID) else v
-    return out
+from app.core.serialize import jsonable as jsonable
 
 
 def parse_uuid(value: str, what: str = "id") -> str:

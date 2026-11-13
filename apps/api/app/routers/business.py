@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 
 from app.auth import deps
 from app.auth import permissions as P
@@ -14,6 +15,7 @@ from app.container import Container
 from app.core.csvsafe import to_csv
 from app.core.errors import ApiError
 from app.routers.common import audit_event, jsonable, parse_uuid
+from app.services.reports import generate_report
 
 router = APIRouter(tags=["reports", "sources", "analytics", "billing"])
 manager = deps.require(P.MANAGE_RULES)
@@ -23,14 +25,20 @@ DISCLAIMER = "Risk signals are leads for human review and not statements of faul
 
 # ------------------------------------------------------------------ reports
 def _report_view(row: dict[str, Any]) -> dict[str, Any]:
-    out = jsonable(row, drop=("tenant_id",))
-    out["status"] = "ready" if row["storage_path"] else "queued"
+    out = jsonable(row, drop=("tenant_id", "storage_path"))
+    out["download_url"] = f"/api/v1/reports/{row['id']}/download" if row["status"] == "ready" else None
     out["disclaimer"] = DISCLAIMER
     return out
 
 
-@router.post("/reports/supplier/{supplier_id}", status_code=202, summary="Request a supplier report")
-def report_supplier(supplier_id: str, p: Principal = Depends(manager),
+@router.get("/reports", summary="Generated and queued reports")
+def reports_list(p: Principal = Depends(manager), conn: Any = deps.TENANT_DB) -> dict[str, Any]:
+    rows = conn.execute("SELECT * FROM reports ORDER BY created_at DESC LIMIT 100").fetchall()
+    return {"items": [_report_view(r) for r in rows]}
+
+
+@router.post("/reports/supplier/{supplier_id}", status_code=202, summary="Request a supplier report (PDF)")
+def report_supplier(supplier_id: str, background: BackgroundTasks, p: Principal = Depends(manager),
                     t: str = Depends(deps.require_tenant), conn: Any = deps.TENANT_DB,
                     c: Container = Depends(deps.get_container)) -> dict[str, Any]:
     sid = parse_uuid(supplier_id, "supplier")
@@ -39,16 +47,18 @@ def report_supplier(supplier_id: str, p: Principal = Depends(manager),
     row = conn.execute("INSERT INTO reports (tenant_id, kind, supplier_id, created_by) "
                        "VALUES (%s,'supplier',%s,%s) RETURNING *", (t, sid, p.user_id)).fetchone()
     audit_event(c, p, "report.requested", "report", str(row["id"]), {"kind": "supplier"})
+    background.add_task(generate_report, c, t, str(row["id"]))
     return _report_view(row)
 
 
-@router.post("/reports/portfolio", status_code=202, summary="Request a portfolio report")
-def report_portfolio(p: Principal = Depends(manager), t: str = Depends(deps.require_tenant),
-                     conn: Any = deps.TENANT_DB, c: Container = Depends(deps.get_container)
-                     ) -> dict[str, Any]:
+@router.post("/reports/portfolio", status_code=202, summary="Request a portfolio report (PDF)")
+def report_portfolio(background: BackgroundTasks, p: Principal = Depends(manager),
+                     t: str = Depends(deps.require_tenant), conn: Any = deps.TENANT_DB,
+                     c: Container = Depends(deps.get_container)) -> dict[str, Any]:
     row = conn.execute("INSERT INTO reports (tenant_id, kind, created_by) "
                        "VALUES (%s,'portfolio',%s) RETURNING *", (t, p.user_id)).fetchone()
     audit_event(c, p, "report.requested", "report", str(row["id"]), {"kind": "portfolio"})
+    background.add_task(generate_report, c, t, str(row["id"]))
     return _report_view(row)
 
 
@@ -59,6 +69,23 @@ def report_get(report_id: str, p: Principal = Depends(manager), conn: Any = deps
     if not row:
         raise ApiError(404, "The report was not found.", code="not-found")
     return _report_view(row)
+
+
+@router.get("/reports/{report_id}/download", summary="Download the PDF")
+def report_download(report_id: str, p: Principal = Depends(manager), conn: Any = deps.TENANT_DB,
+                    c: Container = Depends(deps.get_container)) -> Response:
+    row = conn.execute("SELECT id, status, storage_path FROM reports WHERE id = %s",
+                       (parse_uuid(report_id, "report"),)).fetchone()
+    if not row:
+        raise ApiError(404, "The report was not found.", code="not-found")
+    if row["status"] != "ready" or not row["storage_path"]:
+        raise ApiError(409, f"The report is {row['status']}.", code="not-ready")
+    path = Path(row["storage_path"]).resolve()
+    if Path(c.settings.report_dir).resolve() not in path.parents or not path.is_file():
+        raise ApiError(404, "The report file is not available.", code="not-found")
+    audit_event(c, p, "report.downloaded", "report", str(row["id"]))
+    return Response(path.read_bytes(), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="report_{row["id"]}.pdf"'})
 
 
 # ------------------------------------------------------------------ sources
@@ -90,7 +117,8 @@ def sources(p: Principal = Depends(manager), conn: Any = deps.TENANT_DB) -> dict
 def analytics_portfolio(days: int = 30, p: Principal = Depends(manager),
                         conn: Any = deps.TENANT_DB) -> dict[str, Any]:
     days = min(max(days, 1), 3650)
-    by_status = conn.execute("SELECT status, count(*) AS n FROM suppliers GROUP BY status").fetchall()
+    by_status = conn.execute("SELECT status, count(*) AS n FROM suppliers WHERE duplicate_of IS NULL "
+                             "GROUP BY status").fetchall()
     levels = conn.execute(
         "SELECT rs.level, count(*) AS n FROM suppliers s JOIN LATERAL (SELECT level FROM risk_scores r "
         "WHERE r.supplier_id = s.id ORDER BY computed_at DESC, id DESC LIMIT 1) rs ON true "

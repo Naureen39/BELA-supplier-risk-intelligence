@@ -1,5 +1,7 @@
 PY := .venv/bin/python
 export PYTHONPATH := .
+# WeasyPrint finds Pango here on macOS with Homebrew; harmless elsewhere.
+export DYLD_FALLBACK_LIBRARY_PATH ?= /opt/homebrew/lib
 
 .PHONY: ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 

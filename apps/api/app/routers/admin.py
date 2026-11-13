@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import secrets
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -18,8 +17,9 @@ from app.auth.tokens import new_api_key
 from app.container import Container
 from app.core import audit
 from app.core.errors import ApiError
-from app.events.risk import DEFAULT_RISK_CONFIG, ConfigError, RiskConfig, next_version
+from app.events.risk import ConfigError, next_version
 from app.routers.common import audit_event, jsonable, keyset, page, parse_uuid
+from app.services.risk_config import current_risk_config
 
 router = APIRouter(tags=["admin"])
 TENANT_ROLES = ("viewer", "analyst", "manager", "tenant_admin")
@@ -209,22 +209,6 @@ class RiskConfigIn(BaseModel):
     source_reliability: dict[str, float] | None = None
     impact_cap: float | None = None
     level_thresholds: list[float] | None = Field(default=None, min_length=3, max_length=3)
-
-
-def _config_from(data: dict[str, Any]) -> RiskConfig:
-    fields: dict[str, Any] = {
-        k: (tuple(v) if k in ("severity_weights", "level_thresholds") else v)
-        for k, v in data.items() if k != "version"}
-    cfg = replace(DEFAULT_RISK_CONFIG, **fields)
-    return replace(cfg, version=data.get("version", cfg.version))
-
-
-def current_risk_config(conn: Any) -> tuple[int, RiskConfig]:
-    row = conn.execute("SELECT version, config FROM risk_configs ORDER BY version DESC LIMIT 1"
-                       ).fetchone()
-    if not row:
-        return 1, DEFAULT_RISK_CONFIG
-    return int(row["version"]), _config_from(row["config"])
 
 
 @router.get("/admin/risk-config", summary="Active risk scoring configuration")

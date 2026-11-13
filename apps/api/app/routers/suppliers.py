@@ -26,7 +26,9 @@ from app.core.csvsafe import to_csv
 from app.core.errors import ApiError
 from app.repo.family import related_companies
 from app.routers.common import audit_event, jsonable, keyset, page, parse_uuid
+from app.services import profile as profile_svc
 from app.services import resolution as svc
+from app.services import review as review_svc
 
 router = APIRouter(tags=["suppliers"])
 viewer = deps.require(P.VIEW)
@@ -56,7 +58,8 @@ def resolve(body: ResolveIn, p: Principal = Depends(operator), _l: None = Depend
     from app.resolution.models import QueryRecord
 
     rec = QueryRecord("api", **body.model_dump())
-    return svc.resolution_view(svc.get_resolver(c).resolve(rec))
+    resolver = svc.get_resolver(c)
+    return svc.resolution_view(resolver.resolve(rec), resolver.catalog)
 
 
 # ------------------------------------------------------------------ uploads
@@ -140,17 +143,19 @@ _SUPPLIER_SELECT = (
 @router.get("/suppliers", summary="List suppliers")
 def suppliers(cursor: str | None = None, limit: int = 50, status: str | None = None,
               tier: str | None = None, q: str | None = None, risk_level: str | None = None,
+              include_duplicates: bool = False,
               format: Literal["json", "csv"] = "json", p: Principal = Depends(viewer),
               conn: Any = deps.TENANT_DB, c: Container = Depends(deps.get_container)
               ) -> Any:
     pos, lim = keyset(c, cursor, limit)
     rows = conn.execute(
-        _SUPPLIER_SELECT + "WHERE (%s::text IS NULL OR s.status = %s) AND (%s::text IS NULL OR s.tier = %s) "
+        _SUPPLIER_SELECT + "WHERE (%s OR s.duplicate_of IS NULL) "
+        "AND (%s::text IS NULL OR s.status = %s) AND (%s::text IS NULL OR s.tier = %s) "
         "AND (%s::text IS NULL OR s.uploaded_name ILIKE '%%' || %s || '%%') "
         "AND (%s::text IS NULL OR rs.level = %s) "
         "AND (%s::text IS NULL OR (s.created_at, s.id) < (%s::timestamptz, %s::uuid)) "
         "ORDER BY s.created_at DESC, s.id DESC LIMIT %s",
-        (status, status, tier, tier, q, q, risk_level, risk_level, pos and pos[0], pos and pos[0],
+        (include_duplicates, status, status, tier, tier, q, q, risk_level, risk_level, pos and pos[0], pos and pos[0],
          pos and pos[1], lim + 1)).fetchall()
     if format == "csv":
         body = to_csv(["id", "supplier", "canonical_company_id", "canonical_company", "status",
@@ -172,7 +177,8 @@ def supplier_create(body: SupplierIn, p: Principal = Depends(operator),
                     t: str = Depends(deps.require_tenant), conn: Any = deps.TENANT_DB,
                     c: Container = Depends(deps.get_container)) -> dict[str, Any]:
     attrs = {k: v for k, v in body.model_dump().items() if v is not None and k not in ("name", "tier")}
-    res = svc.get_resolver(c).resolve(svc.to_query("new", {"name": body.name, **attrs}))
+    resolver = svc.get_resolver(c)
+    res = resolver.resolve(svc.to_query("new", {"name": body.name, **attrs}))
     status = svc.status_for(res.route)
     row = conn.execute(
         "INSERT INTO suppliers (tenant_id, uploaded_name, attributes, tier, status, resolved_company_id, "
@@ -183,9 +189,11 @@ def supplier_create(body: SupplierIn, p: Principal = Depends(operator),
     if status == "needs_review":
         conn.execute("INSERT INTO resolution_reviews (tenant_id, supplier_id, candidates) "
                      "VALUES (%s,%s,%s::jsonb)",
-                     (t, row["id"], json.dumps(svc.resolution_view(res)["candidates"])))
+                     (t, row["id"], json.dumps(svc.resolution_view(res, resolver.catalog)["candidates"],
+                                               default=str)))
     audit_event(c, p, "supplier.created", "supplier", str(row["id"]))
-    return {"id": str(row["id"]), "status": status, "resolution": svc.resolution_view(res)}
+    return {"id": str(row["id"]), "status": status,
+            "resolution": svc.resolution_view(res, resolver.catalog)}
 
 
 class SupplierPatch(BaseModel):
@@ -265,47 +273,119 @@ def reviews(cursor: str | None = None, limit: int = 50, status: str = "open",
     pos, lim = keyset(c, cursor, limit)
     rows = conn.execute(
         "SELECT r.id, r.status, r.candidates, r.created_at, s.id AS supplier_id, s.uploaded_name, "
-        "s.attributes FROM resolution_reviews r JOIN suppliers s ON s.id = r.supplier_id "
-        "WHERE r.status = %s AND (%s::text IS NULL OR (r.created_at, r.id) > (%s::timestamptz, %s::uuid)) "
-        "ORDER BY r.created_at, r.id LIMIT %s",
+        "s.attributes, s.tier FROM resolution_reviews r JOIN suppliers s ON s.id = r.supplier_id "
+        "WHERE r.status = %s AND s.duplicate_of IS NULL "
+        "AND (%s::text IS NULL OR (r.created_at, r.id) > (%s::timestamptz, %s::uuid)) "
+        "ORDER BY (s.tier IS NULL), s.tier, r.created_at, r.id LIMIT %s",
         (status, pos and pos[0], pos and pos[0], pos and pos[1], lim + 1)).fetchall()
     return page(c, rows, lim, ("created_at", "id"))
 
 
+@router.get("/reviews/{review_id}", summary="Side-by-side comparison of the record and its candidates")
+def review_detail(review_id: str, p: Principal = Depends(operator), conn: Any = deps.TENANT_DB
+                  ) -> dict[str, Any]:
+    rev = conn.execute(
+        "SELECT r.*, s.uploaded_name, s.attributes, s.tier FROM resolution_reviews r "
+        "JOIN suppliers s ON s.id = r.supplier_id WHERE r.id = %s",
+        (parse_uuid(review_id, "review"),)).fetchone()
+    if not rev:
+        raise ApiError(404, "The review was not found.", code="not-found")
+    attrs = rev["attributes"] or {}
+    return {"id": str(rev["id"]), "status": rev["status"], "supplier_id": str(rev["supplier_id"]),
+            "uploaded": {"name": rev["uploaded_name"], **attrs, "tier": rev["tier"]},
+            "candidates": [cand | {"comparison": review_svc.compare(attrs, rev["uploaded_name"], cand)}
+                           for cand in (rev["candidates"] or [])],
+            "actions": list(review_svc.ACTIONS)}
+
+
 class ReviewDecision(BaseModel):
-    action: Literal["accept", "reject", "choose_other", "mark_unresolved"]
+    action: Literal["accept", "reject", "choose_other", "mark_unresolved", "not_in_database"]
     company_id: int | None = None
 
 
 @router.patch("/reviews/{review_id}", summary="Decide a review")
 def review_decide(review_id: str, body: ReviewDecision, p: Principal = Depends(operator),
-                  conn: Any = deps.TENANT_DB, c: Container = Depends(deps.get_container)
-                  ) -> dict[str, Any]:
+                  t: str = Depends(deps.require_tenant), conn: Any = deps.TENANT_DB,
+                  c: Container = Depends(deps.get_container)) -> dict[str, Any]:
     rid = parse_uuid(review_id, "review")
     rev = conn.execute("SELECT * FROM resolution_reviews WHERE id = %s FOR UPDATE", (rid,)).fetchone()
     if not rev:
         raise ApiError(404, "The review was not found.", code="not-found")
-    if rev["status"] != "open":
-        raise ApiError(409, "This review has already been decided.", code="conflict")
-    chosen: int | None = None
-    if body.action == "accept":
-        if not rev["candidates"]:
-            raise ApiError(409, "There is no candidate to accept.", code="conflict")
-        chosen = int(rev["candidates"][0]["company_id"])
-    elif body.action == "choose_other":
-        if body.company_id is None or not conn.execute(
-                "SELECT 1 FROM companies WHERE id = %s", (body.company_id,)).fetchone():
-            raise ApiError(422, "Choose an existing company.", code="validation")
-        chosen = body.company_id
-    status = {"accept": "accepted", "choose_other": "chose_other", "reject": "rejected",
-              "mark_unresolved": "unresolved"}[body.action]
-    conn.execute("UPDATE resolution_reviews SET status = %s, chosen_company_id = %s, reviewer_id = %s, "
-                 "decided_at = now() WHERE id = %s", (status, chosen, p.user_id, rid))
-    conn.execute("UPDATE suppliers SET status = %s, resolved_company_id = %s, confidence = %s, "
-                 "resolution_detail = resolution_detail || %s::jsonb WHERE id = %s",
-                 ("resolved" if chosen else "unresolved", chosen, 1.0 if chosen else 0.0,
-                  json.dumps({"human_decision": body.action}), rev["supplier_id"]))
+    chosen = review_svc.apply_decision(conn, c, t, p.user_id, rev, body.action, body.company_id)
     audit_event(c, p, "review.decided", "review", rid, {"action": body.action, "company_id": chosen})
-    return {"id": rid, "status": status, "company_id": chosen}
+    return {"id": rid, "status": "decided", "action": body.action, "company_id": chosen}
 
 
+class BulkAccept(BaseModel):
+    min_probability: float = Field(ge=0.5, le=1.0)
+    min_margin: float = Field(default=0.1, ge=0.0, le=1.0)
+
+
+@router.post("/reviews/bulk-accept", summary="Accept every open review above a confidence")
+def reviews_bulk_accept(body: BulkAccept, p: Principal = Depends(operator),
+                        t: str = Depends(deps.require_tenant), conn: Any = deps.TENANT_DB,
+                        c: Container = Depends(deps.get_container)) -> dict[str, Any]:
+    rows = conn.execute("SELECT * FROM resolution_reviews WHERE status = 'open' ORDER BY created_at "
+                        "FOR UPDATE").fetchall()
+    accepted = 0
+    for rev in rows:
+        cands = rev["candidates"] or []
+        if not cands or cands[0]["probability"] < body.min_probability:
+            continue
+        runner = cands[1]["probability"] if len(cands) > 1 else 0.0
+        if cands[0]["probability"] - runner < body.min_margin:
+            continue
+        review_svc.apply_decision(conn, c, t, p.user_id, rev, "accept", None)
+        accepted += 1
+    audit_event(c, p, "review.bulk_accepted", detail={"accepted": accepted,
+                                                       "min_probability": body.min_probability})
+    return {"accepted": accepted, "remaining": len(rows) - accepted}
+
+
+# ------------------------------------------------------------------ duplicates
+class MergeIn(BaseModel):
+    into_supplier_id: str
+
+
+@router.post("/suppliers/{supplier_id}/merge", summary="Mark a supplier as a duplicate of another")
+def supplier_merge(supplier_id: str, body: MergeIn, p: Principal = Depends(operator),
+                   conn: Any = deps.TENANT_DB, c: Container = Depends(deps.get_container)
+                   ) -> dict[str, Any]:
+    sid, target = parse_uuid(supplier_id, "supplier"), parse_uuid(body.into_supplier_id, "supplier")
+    if sid == target:
+        raise ApiError(422, "A supplier cannot be merged into itself.", code="validation")
+    rows = {str(r["id"]): r for r in conn.execute(
+        "SELECT id, duplicate_of FROM suppliers WHERE id = ANY(%s::uuid[])", ([sid, target],)).fetchall()}
+    if len(rows) != 2:
+        raise ApiError(404, "The supplier was not found.", code="not-found")
+    if rows[target]["duplicate_of"] is not None:
+        raise ApiError(409, "The target is itself a duplicate. Merge into the primary record.",
+                       code="conflict")
+    conn.execute("UPDATE suppliers SET duplicate_of = %s WHERE id = %s", (target, sid))
+    conn.execute("UPDATE suppliers SET duplicate_of = %s WHERE duplicate_of = %s", (target, sid))
+    conn.execute("UPDATE resolution_reviews SET status = 'unresolved', decided_at = now(), reviewer_id = %s "
+                 "WHERE supplier_id = %s AND status = 'open'", (p.user_id, sid))
+    audit_event(c, p, "supplier.merged", "supplier", sid, {"into": target})
+    return {"id": sid, "duplicate_of": target}
+
+
+@router.post("/suppliers/{supplier_id}/unmerge", summary="Restore a merged duplicate")
+def supplier_unmerge(supplier_id: str, p: Principal = Depends(operator), conn: Any = deps.TENANT_DB,
+                     c: Container = Depends(deps.get_container)) -> dict[str, Any]:
+    sid = parse_uuid(supplier_id, "supplier")
+    row = conn.execute("UPDATE suppliers SET duplicate_of = NULL WHERE id = %s AND duplicate_of IS NOT NULL "
+                       "RETURNING id", (sid,)).fetchone()
+    if not row:
+        raise ApiError(404, "The supplier is not a merged duplicate.", code="not-found")
+    audit_event(c, p, "supplier.unmerged", "supplier", sid)
+    return {"id": sid, "duplicate_of": None}
+
+
+# ------------------------------------------------------------------ profile
+@router.get("/suppliers/{supplier_id}/profile", summary="Everything known about a supplier")
+def supplier_profile(supplier_id: str, p: Principal = Depends(viewer), conn: Any = deps.TENANT_DB
+                     ) -> dict[str, Any]:
+    row = conn.execute("SELECT * FROM suppliers WHERE id = %s", (parse_uuid(supplier_id, "supplier"),)).fetchone()
+    if not row:
+        raise ApiError(404, "The supplier was not found.", code="not-found")
+    return profile_svc.supplier_profile(conn, row)

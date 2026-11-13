@@ -15,6 +15,11 @@ from app.events.risk import SupplierScore
 from app.events.schema import NormalizedEvent
 
 
+def _rid(row: Any) -> int:
+    """First column of a RETURNING row, for tuple or dict rows."""
+    return int(next(iter(row.values())) if isinstance(row, dict) else row[0])
+
+
 def upsert_events(conn: Any, events: Sequence[NormalizedEvent]) -> dict[tuple[str, str], int]:
     ids: dict[tuple[str, str], int] = {}
     for ev in events:
@@ -29,7 +34,7 @@ def upsert_events(conn: Any, events: Sequence[NormalizedEvent]) -> dict[tuple[st
              ev.title, ev.summary, ev.url, json.dumps(ev.raw_ref), ev.state, ev.city, ev.latitude,
              ev.longitude, ev.rules_version),
         ).fetchone()
-        ids[(ev.source, ev.source_id)] = int(row[0])
+        ids[(ev.source, ev.source_id)] = int(_rid(row))
     return ids
 
 
@@ -51,7 +56,7 @@ def replace_event_entities(conn: Any, ids: dict[tuple[str, str], int],
             cur.executemany(
                 "INSERT INTO link_candidates (event_entity_id, rank, company_id, splink_score) "
                 "VALUES (%s,%s,%s,%s)",
-                [(int(row[0]), rank, cid, p) for rank, (cid, p) in enumerate(link.candidates, 1)],
+                [(int(_rid(row)), rank, cid, p) for rank, (cid, p) in enumerate(link.candidates, 1)],
             )
 
 
@@ -62,7 +67,7 @@ def insert_score(conn: Any, tenant_id: str, supplier_id: str, score: SupplierSco
         "INSERT INTO risk_scores (tenant_id, supplier_id, score, level, config_version) "
         "VALUES (%s,%s,%s,%s,%s) RETURNING id",
         (tenant_id, supplier_id, score.score, score.level, score.config_version)).fetchone()
-    score_id = int(row[0])
+    score_id = int(_rid(row))
     with conn.cursor() as cur:
         cur.executemany(
             "INSERT INTO risk_score_components (risk_score_id, event_id, category, severity_weight, "

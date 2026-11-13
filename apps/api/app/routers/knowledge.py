@@ -129,6 +129,14 @@ def graph_neighbors(company_id: int, depth: int = Query(1, ge=1, le=3),
             "truncated": len(seen) >= 500}
 
 
+@router.get("/graph/concentration", summary="Suppliers grouped under their ultimate parent")
+def graph_concentration(top: int = Query(20, ge=1, le=100), p: Principal = Depends(viewer),
+                        conn: Any = deps.TENANT_DB) -> dict[str, Any]:
+    from app.services.portfolio import concentration
+
+    return concentration(conn, top)
+
+
 @router.get("/graph/path", summary="Shortest ownership path between two companies")
 def graph_path(source: int, target: int, p: Principal = Depends(viewer),
                conn: Any = deps.TENANT_DB) -> dict[str, Any]:

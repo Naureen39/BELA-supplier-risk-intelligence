@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.container import Container
-from app.resolution.catalog import load_catalog
+from app.resolution.catalog import Catalog, load_catalog
 from app.resolution.fitting import load_models
 from app.resolution.models import QueryRecord, Resolution, Route
 from app.resolution.structured import Resolver
@@ -103,13 +103,32 @@ def to_query(row_id: str, attrs: dict[str, Any]) -> QueryRecord:
                        cik=num(attrs.get("cik")), lei=attrs.get("lei"), ticker=attrs.get("ticker"))
 
 
-def resolution_view(res: Resolution, catalog_names: dict[int, str] | None = None) -> dict[str, Any]:
+def candidate_details(catalog: Catalog, company_id: int) -> dict[str, Any]:
+    rec = catalog.by_id[company_id]
+    return {"aliases": list(rec.aliases[:5]), "hq_city": rec.hq_city, "hq_state": rec.hq_state,
+            "hq_country": rec.hq_country, "cik": rec.cik, "lei": rec.lei, "tickers": list(rec.tickers),
+            "sic_code": rec.sic_code, "industry": rec.industry, "parent_name": rec.parent_name,
+            "is_public": rec.is_public}
+
+
+def resolution_view(res: Resolution, catalog: Catalog | None = None) -> dict[str, Any]:
+    view = _resolution_view(res)
+    if catalog is not None:
+        for cand in view["candidates"]:
+            cand["details"] = candidate_details(catalog, cand["company_id"])
+    return view
+
+
+def _resolution_view(res: Resolution) -> dict[str, Any]:
     return {
         "company_id": res.company_id, "route": res.route.value, "method": res.method,
         "probability": round(res.probability, 4), "margin": round(res.margin, 4),
         "degraded": res.degraded, "config_version": res.config_version, "notes": res.notes,
         "candidates": [{"company_id": cand.company_id, "name": cand.name,
                         "probability": round(cand.probability, 4), "sources": sorted(cand.sources),
+                        "scores": {"retrieval": round(cand.retrieval_score, 4),
+                                   "splink_weight": round(cand.splink_weight, 3),
+                                   "blink": None if cand.blink_score is None else round(cand.blink_score, 4)},
                         "features": {k: round(v, 3) for k, v in cand.features.items()
                                      if k in ("name_token_sort", "name_exact", "state_agree",
                                               "state_disagree", "city_agree", "industry_agree")}}
@@ -147,7 +166,8 @@ def process_upload(c: Container, tenant_id: str, upload_id: str) -> None:
                     conn.execute(
                         "INSERT INTO resolution_reviews (tenant_id, supplier_id, candidates) "
                         "VALUES (%s,%s,%s::jsonb)",
-                        (tenant_id, row["id"], json.dumps(resolution_view(res)["candidates"])))
+                        (tenant_id, row["id"],
+                         json.dumps(resolution_view(res, resolver.catalog)["candidates"], default=str)))
                 if i % 100 == 0:
                     _progress(conn, upload_id, counts, "processing")
         with c.db.system() as conn:

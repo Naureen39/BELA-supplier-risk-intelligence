@@ -50,6 +50,9 @@ class Settings:
     mail_from: str = "no-reply@provenance.example"
     web_base_url: str = "https://localhost"
     allow_ephemeral_secrets: bool = True
+    report_dir: str = "var/reports"
+    demo_mode: bool = True  # reports and views label synthetic tenant data
+    webhook_timeout: float = 5.0
     mandatory_mfa_roles: frozenset[str] = field(
         default_factory=lambda: frozenset({"tenant_admin", "platform_admin"}))
 
@@ -67,4 +70,6 @@ class Settings:
             smtp_port=int(os.environ.get("SMTP_PORT", "1025")),
             web_base_url=os.environ.get("WEB_BASE_URL", "https://localhost"),
             allow_ephemeral_secrets=_bool("ALLOW_EPHEMERAL_SECRETS", False),
+            report_dir=os.environ.get("REPORT_DIR", "var/reports"),
+            demo_mode=_bool("DEMO_MODE", True),
         )

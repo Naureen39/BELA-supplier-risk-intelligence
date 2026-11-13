@@ -26,9 +26,11 @@ dependencies = [
   "fastapi",
   "uvicorn",
   "prometheus-client",
+  "weasyprint",
 ]
 
 [project.optional-dependencies]
+test = ["pypdf"]
 models = ["sentence-transformers", "faiss-cpu", "huggingface-hub"]
 
 [tool.pytest.ini_options]

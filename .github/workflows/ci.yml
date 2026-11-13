@@ -22,7 +22,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install -e . pytest pytest-cov ruff mypy types-PyYAML pip-audit
+      - run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+      - run: pip install -e . pypdf pytest pytest-cov ruff mypy types-PyYAML pip-audit
       - run: python infra/ci/check_no_em_dash.py
       - run: ruff check apps data tests infra training services
       - run: mypy -p data.scripts

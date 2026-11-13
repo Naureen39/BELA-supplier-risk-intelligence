@@ -70,3 +70,26 @@ def neighbors(conn: Any, company_id: int, depth: int, cap: int = 500
                 edges[(r["parent_id"], r["child_id"])] = (r["source"], r["as_of"])
         frontier = nxt
     return seen, [(p, c, s, a) for (p, c), (s, a) in edges.items()]
+
+
+def load_edges(conn: Any, seeds: list[int], depth: int = 2) -> list[tuple[int, int]]:
+    """All ownership edges within `depth` hops (undirected) of the seed companies."""
+    seen = set(seeds)
+    edges: set[tuple[int, int]] = set()
+    frontier = list(seen)
+    for _ in range(depth):
+        if not frontier:
+            break
+        rows = conn.execute(
+            "SELECT parent_id, child_id FROM company_relationships WHERE (parent_id = ANY(%s) "
+            "OR child_id = ANY(%s)) AND rel_type IN ('direct_parent','subsidiary','owned_by')",
+            (frontier, frontier)).fetchall()
+        nxt = []
+        for r in rows:
+            edges.add((r["parent_id"], r["child_id"]))
+            for node in (r["parent_id"], r["child_id"]):
+                if node not in seen:
+                    seen.add(node)
+                    nxt.append(node)
+        frontier = nxt
+    return sorted(edges)
