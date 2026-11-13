@@ -149,25 +149,23 @@ class Catalog:
 
 
 def load_catalog(conn: Any) -> Catalog:
-    """Load the catalog from PostgreSQL. Not covered by automated tests in the offline sandbox."""
-    aliases: dict[int, list[str]] = defaultdict(list)
-    for company_id, alias in conn.execute("SELECT company_id, alias FROM company_aliases"):
-        aliases[company_id].append(alias)
-    edges = [
-        (p, c)
-        for p, c in conn.execute(
-            "SELECT parent_id, child_id FROM company_relationships "
-            "WHERE rel_type IN ('direct_parent','subsidiary','owned_by')"
-        )
-    ]
+    """Load the catalog from PostgreSQL (works with any row factory)."""
+    from psycopg.rows import tuple_row
+
+    with conn.cursor(row_factory=tuple_row) as cur:
+        aliases: dict[int, list[str]] = defaultdict(list)
+        cur.execute("SELECT company_id, alias FROM company_aliases")
+        for company_id, alias in cur.fetchall():
+            aliases[company_id].append(alias)
+        cur.execute("SELECT parent_id, child_id FROM company_relationships "
+                    "WHERE rel_type IN ('direct_parent','subsidiary','owned_by')")
+        edges = [(p, c) for p, c in cur.fetchall()]
+        cur.execute(
+            "SELECT id, canonical_name, cik, lei, wikidata_qid, tickers, sic_code, hq_city, hq_state, "
+            "hq_country, is_public, description FROM companies")
+        rows = cur.fetchall()
     parent_of: dict[int, int] = {c: p for p, c in edges}
-    names: dict[int, str] = {}
-    rows = conn.execute(
-        "SELECT id, canonical_name, cik, lei, wikidata_qid, tickers, sic_code, hq_city, hq_state, "
-        "hq_country, is_public, description FROM companies"
-    ).fetchall()
-    for row in rows:
-        names[row[0]] = row[1]
+    names = {r[0]: r[1] for r in rows}
     records = [
         CompanyRecord(
             id=r[0], name=r[1], aliases=tuple(aliases.get(r[0], ())), cik=r[2], lei=r[3],

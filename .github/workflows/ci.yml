@@ -11,8 +11,12 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
     env:
       TEST_DATABASE_ADMIN_URL: postgresql+psycopg://postgres:postgres@localhost:5432/postgres
+      VALKEY_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,10 +26,10 @@ jobs:
       - run: python infra/ci/check_no_em_dash.py
       - run: ruff check apps data tests infra training services
       - run: mypy -p data.scripts
-      - run: MYPYPATH=apps/api:. mypy --strict -p app.kb -p app.resolution -p app.events
+      - run: MYPYPATH=apps/api:. mypy --strict -p app
       - run: mypy services training
       - run: python -m training.train --dry-run
-      - run: PYTHONPATH=.:apps/api pytest --cov=app.kb --cov=app.resolution --cov=app.events --cov-fail-under=80
+      - run: PYTHONPATH=.:apps/api pytest --cov=app --cov-fail-under=80
       - run: pip-audit
       - uses: gitleaks/gitleaks-action@v2
         env:

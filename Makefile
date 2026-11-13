@@ -34,7 +34,7 @@ counts:
 	$(PY) -m data.scripts.verify_manifest --counts
 
 test:
-	PYTHONPATH=.:apps/api .venv/bin/python -m pytest --cov=data.scripts --cov=app.kb --cov=app.resolution --cov=app.events --cov-report=term-missing
+	PYTHONPATH=.:apps/api .venv/bin/python -m pytest --cov=data.scripts --cov=app --cov-report=term-missing
 
 # Phase 2: database. DATABASE_URL example: postgresql+psycopg://user:pw@localhost:5432/provenance
 migrate:
@@ -47,7 +47,7 @@ lint: check-dash
 	.venv/bin/ruff check apps data tests infra training services
 	.venv/bin/mypy -p data.scripts
 	.venv/bin/mypy services training
-	MYPYPATH=apps/api:. .venv/bin/mypy --strict -p app.kb -p app.resolution -p app.events
+	MYPYPATH=apps/api:. .venv/bin/mypy --strict -p app
 
 check-dash:
 	$(PY) infra/ci/check_no_em_dash.py
@@ -79,3 +79,9 @@ ingest-events:
 
 eval-events:
 	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.events.evaluation --gold ../../data/gold/events.jsonl --out ../../docs/eval/event_labeling.md
+
+# Phase 5: API. Needs DATABASE_URL (after make migrate) and, outside development, the secrets in .env.example.
+api:
+	PYTHONPATH=apps/api:. .venv/bin/uvicorn --factory app.main:create_app --host 127.0.0.1 --port 8000 --reload
+
+# Run the database tests locally: TEST_DATABASE_ADMIN_URL=postgresql+psycopg://user@host/postgres make test
