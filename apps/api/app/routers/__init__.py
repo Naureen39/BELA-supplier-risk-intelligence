@@ -14,6 +14,7 @@ from app.routers import (
     knowledge,
     monitoring,
     platform,
+    public,
     revenue,
     suppliers,
     uploads,
@@ -23,5 +24,5 @@ from app.routers import (
 ROUTERS: list[APIRouter] = [
     health.router, auth.router, admin.router, uploads.router, analytics.router, suppliers.router, corrections.router,
     knowledge.router, alerts.router, business.router, monitoring.router, platform.router, revenue.router,
-    contact.router,
+    contact.router, public.router,
 ]

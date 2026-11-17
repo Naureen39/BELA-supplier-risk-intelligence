@@ -1,0 +1,56 @@
+{
+  "preset": "desktop",
+  "generated": "2026-11-17",
+  "pages": {
+    "home": {
+      "url": "http://127.0.0.1:3000/",
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 289,
+      "cls": 0,
+      "tbtMs": 0
+    },
+    "pricing": {
+      "url": "http://127.0.0.1:3000/pricing",
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 202,
+      "cls": 0.0002,
+      "tbtMs": 0
+    },
+    "platform": {
+      "url": "http://127.0.0.1:3000/platform",
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 243,
+      "cls": 0.0022,
+      "tbtMs": 0
+    },
+    "article": {
+      "url": "http://127.0.0.1:3000/resources/measuring-a-matching-system",
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 202,
+      "cls": 0.0004,
+      "tbtMs": 0
+    },
+    "login": {
+      "url": "http://127.0.0.1:3000/login",
+      "performance": 100,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 66,
+      "lcpMs": 203,
+      "cls": 0,
+      "tbtMs": 0
+    }
+  }
+}

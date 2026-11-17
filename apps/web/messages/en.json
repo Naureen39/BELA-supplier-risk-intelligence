@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "platform": "Platform",
+    "solutions": "Solutions",
+    "industries": "Industries",
+    "resources": "Resources",
+    "pricing": "Pricing",
+    "company": "Company",
+    "login": "Log in",
+    "demo": "Request a demo",
+    "menu": "Menu",
+    "close": "Close",
+    "skip": "Skip to main content"
+  },
+  "utility": {
+    "support": "Support",
+    "status": "Status",
+    "developers": "Developers",
+    "language": "Language",
+    "unavailable": "Translation not yet available"
+  },
+  "footer": {
+    "newsletter": "Insights by email",
+    "newsletterHint": "Occasional articles on supplier data and risk signals. Confirm by email to subscribe.",
+    "email": "Email address",
+    "subscribe": "Subscribe",
+    "disclaimer": "Risk signals are leads for human review and not statements of fault.",
+    "credits": "Data sources: SEC, GLEIF, Wikidata, EPA, US Department of Labor, NHTSA, CPSC, FDA, GDELT. Built on the open-source BELA and BLINK releases; not affiliated with their authors.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "cookies": "Cookies"
+  },
+  "cookie": {
+    "text": "This site uses only essential cookies for sign-in and security. No advertising or analytics cookies are set.",
+    "ok": "Understood",
+    "more": "Cookie policy"
+  }
+}

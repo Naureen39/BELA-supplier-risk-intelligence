@@ -3,7 +3,7 @@ export PYTHONPATH := .
 # WeasyPrint finds Pango here on macOS with Homebrew; harmless elsewhere.
 export DYLD_FALLBACK_LIBRARY_PATH ?= /opt/homebrew/lib
 
-.PHONY: demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: web-install web-dev web-build web-check web-e2e web-quality demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -96,6 +96,26 @@ metrics-refresh:
 
 demo-portfolios:
 	PYTHONPATH=.:apps/api $(PY) -m data.scripts.generate_demo_portfolios --from-db
+
+# Phase 8: web app. Needs Node 22 or newer.
+web-install:
+	cd apps/web && npm ci
+
+web-dev:
+	cd apps/web && API_ORIGIN=http://127.0.0.1:8000 npm run dev
+
+web-build:
+	cd apps/web && npm run build
+
+web-check:
+	cd apps/web && npx prettier --check . && npm run lint && npm run typecheck && npm test
+
+# End to end tests: needs the API running (make api) against a database seeded by seed_api.py.
+web-e2e:
+	cd apps/web && API_ORIGIN=http://127.0.0.1:8000 npm run e2e
+
+web-quality:
+	cd apps/web && npm run build && npm run quality
 
 api:
 	PYTHONPATH=apps/api:. .venv/bin/uvicorn --factory app.main:create_app --host 127.0.0.1 --port 8000 --reload

@@ -1,0 +1,81 @@
+export const meta = {
+  slug: "what-regulator-data-can-and-cannot-tell-you",
+  title: "What regulator recall and enforcement data can and cannot tell you about a supplier",
+  summary:
+    "How to read public records responsibly: what each type of record means, and the limits of using them as a signal.",
+  tag: "Data sources",
+  date: "2026-09-29",
+  readMinutes: 6,
+};
+
+Regulators publish a great deal of structured data about inspections, recalls, and enforcement. It is an attractive input for supplier monitoring because it is public, dated, and tied to named firms. It is also easy to misread. This article sets out what the main record types are, what they establish, and what they do not.
+
+## The main record types
+
+**Inspection and citation records.** An inspection is a visit by an agency to an establishment. A citation is a statement by the agency that it found a condition it considers a violation, and it carries a proposed penalty. A citation can be contested, reduced, or withdrawn. The record usually shows the current status, and the status matters as much as the citation.
+
+**Compliance and enforcement history.** Environmental programs record a facility's compliance status over quarters, and enforcement actions where they occurred. A compliance flag can reflect a reporting issue as well as an emissions issue.
+
+**Recalls.** A recall is an action to remove or correct a product. It may be started by the firm or requested by an agency. A recall record states the product, the reason, a classification, and sometimes the number of units. A recall is not a finding about how the product came to be defective.
+
+**Complaints and reports.** Some systems publish consumer or industry reports. These are unverified submissions. They show what people reported, not what was confirmed.
+
+## What a record establishes
+
+A record establishes that a named public body published a statement on a date about a named entity at a location. That is useful and specific. A reviewer can open the source, read the statement, and check the date.
+
+## What a record does not establish
+
+- **Fault.** A citation, a complaint, or a recall is not a finding that a company broke a law or caused an incident. Those conclusions come from adjudication, which these datasets mostly do not contain.
+- **Current condition.** A record describes a past event. A condition may have been corrected since.
+- **Completeness.** Absence of a record does not mean absence of a problem. Many issues are never inspected or reported, and coverage differs between agencies and countries.
+- **Severity in context.** A large penalty at a large firm and a small penalty at a small firm are not comparable without more information.
+- **Ownership.** The firm named in a record may not be the company that owns the site today.
+
+## Coverage limits
+
+Structured regulator data used in this kind of monitoring is mostly from the United States. That is a property of what is published in bulk, not a judgment about conduct elsewhere. Suppliers in other countries will show fewer structured records and rely more on news and on identifiers such as the Legal Entity Identifier. A quiet profile for a non-United States supplier should not be read as a clean one.
+
+Within the United States, coverage also differs by agency. Some publish full histories, some only recent years, and some have records of unknown quality before a given date. A responsible tool states these limits instead of hiding them.
+
+## Matching quality limits what the record can tell you
+
+Most regulator records identify a firm by name, address, and a program identifier. They rarely carry the identifiers a buyer uses. Linking a record to a supplier is itself a probabilistic step, so every record shown against a supplier carries a link confidence. A weak link should be shown as weak. A low-confidence link should go to review, not into a score.
+
+## How to use the records well
+
+1. **Read the source.** Follow the link to the agency record and read it in full. Summaries lose detail.
+2. **Read the status and date.** Check whether a citation was reduced or withdrawn, and how old the record is.
+3. **Weigh by type and recency.** A recent, serious, directly linked record counts for more than an old, minor record at a subsidiary. A transparent score makes those weights visible.
+4. **Keep the question open.** Treat a record as a reason to ask the supplier a question, not as an answer.
+5. **Record your reasoning.** Note why you acted or did not act, so the decision can be reviewed.
+
+## How a product should present the records
+
+- Use neutral wording: state what the record says, with the source, the record date, and a link.
+- Distinguish allegations, citations, and recalls from findings.
+- Show the confidence of the link between the record and the company.
+- Show the path from a subsidiary or facility to the supplier.
+- Show a disclaimer wherever risk is summarized: risk signals are leads for human review and not statements of fault.
+
+## Summary
+
+Regulator data is a good starting point for questions and a poor basis for conclusions. Its value rises with careful matching, transparent weighting, and a clear statement of what is and is not covered.
+
+## An example reading
+
+The example uses a fictional firm. An agency inspection record lists a citation at a food plant with a proposed penalty and a status of "contested". Two months later the record shows a reduced penalty and a settled status.
+
+A careless reading takes the first version and reports a violation with a large penalty. A careful reading notes that the citation was contested, that the final amount was lower, and that the record describes a condition at one establishment at one time. The careful version supports a measured question to the supplier: what was done about the condition? It does not support a statement about the firm's overall practice.
+
+The same care applies to recalls. A recall of one product line says nothing directly about other lines, and a recall classification reflects the agency's assessment of the hazard, not the size of the company's response.
+
+## Questions that improve a review
+
+- Is the record about the supplier, or about a name that looks like the supplier? Check state and address.
+- Which establishment is named, and does the supplier operate it now?
+- Is the record still open, or has it been resolved?
+- How many comparable records exist for peers in the same sector, so that one record can be seen in proportion?
+- Does the record concern a product, a workplace, or an environmental release, and does that matter for what you buy?
+
+Taking a few minutes with these questions turns a data point into a considered judgment, and it protects both the buyer and the supplier from a misreading.

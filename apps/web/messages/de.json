@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "platform": "Plattform",
+    "solutions": "Lösungen",
+    "industries": "Branchen",
+    "resources": "Ressourcen",
+    "pricing": "Preise",
+    "company": "Unternehmen",
+    "login": "Anmelden",
+    "demo": "Demo anfragen",
+    "menu": "Menü",
+    "close": "Schließen",
+    "skip": "Zum Hauptinhalt springen"
+  },
+  "utility": {
+    "support": "Support",
+    "status": "Status",
+    "developers": "Entwickler",
+    "language": "Sprache",
+    "unavailable": "Übersetzung noch nicht verfügbar"
+  },
+  "footer": {
+    "newsletter": "Beiträge per E-Mail",
+    "newsletterHint": "Gelegentliche Beiträge zu Lieferantendaten und Risikosignalen. Zur Anmeldung per E-Mail bestätigen.",
+    "email": "E-Mail-Adresse",
+    "subscribe": "Abonnieren",
+    "disclaimer": "Risikosignale sind Hinweise für die menschliche Prüfung und keine Schuldzuweisungen.",
+    "credits": "Datenquellen: SEC, GLEIF, Wikidata, EPA, US-Arbeitsministerium, NHTSA, CPSC, FDA, GDELT. Basiert auf den Open-Source-Veröffentlichungen von BELA und BLINK; nicht mit deren Autoren verbunden.",
+    "privacy": "Datenschutz",
+    "terms": "Bedingungen",
+    "cookies": "Cookies"
+  },
+  "cookie": {
+    "text": "Diese Website verwendet nur notwendige Cookies für Anmeldung und Sicherheit. Es werden keine Werbe- oder Analyse-Cookies gesetzt.",
+    "ok": "Verstanden",
+    "more": "Cookie-Richtlinie"
+  }
+}

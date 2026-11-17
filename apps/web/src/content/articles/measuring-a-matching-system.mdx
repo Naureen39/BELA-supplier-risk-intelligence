@@ -1,0 +1,98 @@
+export const meta = {
+  slug: "measuring-a-matching-system",
+  title: "Measuring a matching system: precision, recall, and review workload",
+  summary:
+    "Which numbers describe a matching system honestly, how to build the labeled set, and how to read the trade-offs.",
+  tag: "Evaluation",
+  date: "2026-10-06",
+  readMinutes: 7,
+};
+
+A matching system can look excellent on a demonstration and still fail on a real supplier list. The difference is measurement. This article describes the measures that matter, the labeled data they need, and the mistakes to avoid.
+
+## Start with the decision, not the model
+
+A matching system makes a sequence of decisions: accept a match automatically, send it to a person, or leave it unresolved. The useful measures describe those decisions and their consequences.
+
+**Precision of automatic matches.** Of the matches accepted without review, what share are correct? This is the number that protects against false links. It should be reported for the accepted route only, not for the whole system.
+
+**Recall.** Of the records that have a correct company in the knowledge base, what share are matched to it, either automatically or after review? Recall depends on how much work is sent to reviewers.
+
+**False links per 1,000 records.** The number of wrong companies attached to records, per thousand records processed. It states precision in terms a buyer can picture, and it compares directly with a baseline.
+
+**Review rate and review time.** The share of records routed to a person, and how long a reviewer takes. These are costs. A system that reaches high precision by sending most records to review is not necessarily better than a simpler one.
+
+**NIL accuracy.** Some records have no company in the knowledge base. The system should leave them unresolved. The F1 score on this class, often called NIL F1, shows whether it does.
+
+**Recall at k.** For the retrieval stage alone, how often the correct company appears among the top k candidates. This measures whether the later stages are given a chance.
+
+## The trade-off curve
+
+Precision and recall move in opposite directions as the accept threshold changes. Plotting precision against recall across thresholds shows the whole trade-off. Report the operating point actually used and the curve that surrounds it, not the best point on the curve. State the threshold and the route logic alongside the numbers.
+
+## Build a labeled set
+
+Measurement needs gold labels: records for which a person has identified the correct company or marked that none exists. A useful structure is:
+
+- **A few hundred structured records**, such as regulator or filing rows, mapped to a canonical company or to NIL.
+- **A deliberately hard subset**: same name in different states, parent versus subsidiary, similar names, plant-specific names. An evaluation without hard cases overstates quality.
+- **News mentions in sentences**, in more than one language, mapped to a company or to NIL.
+- **Double annotation on a portion**, with agreement reported. Disagreement between annotators sets a ceiling on what any system can claim.
+
+Label sets should be committed alongside the code that evaluates them, with a note on how they were built.
+
+## Hold out by company
+
+A common mistake is to split training and test data by row. A company that appears in both sets lets the model memorize its names, and the test then overstates performance. Split by company so that no company in the test set is seen in training. Exclude the gold companies from any synthetic training data as well.
+
+## Compare against baselines
+
+A number is meaningful only against something. Useful baselines are:
+
+- **Fuzzy string matching** on normalized names with a threshold.
+- **The probabilistic model alone**, without retrieval signals from learned models.
+- **The full hybrid pipeline.**
+
+Report all three on the same records. The improvement of the hybrid over fuzzy matching, in false links per 1,000 records at a similar recall, is the figure that justifies the added complexity.
+
+## Separate synthetic from gold results
+
+Synthetic data is useful for development: perturbed names of known companies show whether the pipeline survives typical noise. Results on synthetic data are not results on real data, because the perturbations are the ones the generator knows about. Label every table with the data it was computed on, and never present a synthetic result as a gold result. If no gold set exists yet, say so.
+
+## Calibration
+
+If the system reports a probability, check it. Group predictions by predicted probability and compare each group with its actual accuracy. A reliable score means that predictions near 0.9 are right about nine times in ten. Poor calibration makes thresholds meaningless. Calibrate on labeled data that was not used to fit the model.
+
+## Measure live
+
+After deployment, reviewers produce labels as a side effect of their work. Two figures come from them: the rate at which reviewers change or reject a proposed match, and the wrong-link corrections filed against resolved suppliers. Both undercount errors that nobody notices, so they are lower bounds. They still show direction over time, and they flag drift.
+
+## Reading a result responsibly
+
+When you see a quality claim, ask:
+
+1. What data was it measured on, and how many records?
+2. Is it gold or synthetic?
+3. Which route does the precision describe?
+4. What is the review rate that goes with it?
+5. What is the baseline, and on which records?
+6. How was the threshold chosen, and on which data?
+
+A result that answers these questions can be checked and repeated. A result that does not is a marketing number.
+
+## Reporting a result in full
+
+A complete report of a matching evaluation names the following items.
+
+- The data: gold or synthetic, how many records, how they were sampled, and how many are hard cases.
+- The systems compared, with versions.
+- The operating point: thresholds, margin rule, and the share routed to each of the four routes.
+- The measures: precision of accepted matches, recall after review, false links per 1,000, NIL F1, review rate, and latency.
+- The uncertainty: for small samples, a confidence interval or at least the count behind each percentage.
+- The limits: where the system is known to fail, and what has not been tested.
+
+Small samples deserve special care. A precision of 100 percent on twenty accepted matches is compatible with a true precision well below 95 percent. Report the counts so readers can judge, and avoid rounding that implies more certainty than the sample supports.
+
+## A short example of reading the trade-offs
+
+Suppose two configurations are tested on the same hard set. One accepts more records automatically and produces more false links per thousand. The other sends more records to review and produces fewer false links. Neither is better in the abstract. The right choice depends on the cost of a reviewer's time against the cost of a wrong link in the intended use. A program that acts on alerts without review should choose the second. A program that only uses links to prioritize reading might accept the first. Measuring both and stating the choice is more useful than reporting a single number.

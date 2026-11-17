@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "platform": "Plataforma",
+    "solutions": "Soluciones",
+    "industries": "Sectores",
+    "resources": "Recursos",
+    "pricing": "Precios",
+    "company": "Empresa",
+    "login": "Iniciar sesión",
+    "demo": "Solicitar una demostración",
+    "menu": "Menú",
+    "close": "Cerrar",
+    "skip": "Saltar al contenido principal"
+  },
+  "utility": {
+    "support": "Soporte",
+    "status": "Estado",
+    "developers": "Desarrolladores",
+    "language": "Idioma",
+    "unavailable": "Traducción aún no disponible"
+  },
+  "footer": {
+    "newsletter": "Artículos por correo",
+    "newsletterHint": "Artículos ocasionales sobre datos de proveedores y señales de riesgo. Confirme por correo para suscribirse.",
+    "email": "Correo electrónico",
+    "subscribe": "Suscribirse",
+    "disclaimer": "Las señales de riesgo son pistas para revisión humana y no declaraciones de culpa.",
+    "credits": "Fuentes de datos: SEC, GLEIF, Wikidata, EPA, Departamento de Trabajo de EE. UU., NHTSA, CPSC, FDA, GDELT. Basado en las versiones de código abierto de BELA y BLINK; sin afiliación con sus autores.",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "cookies": "Cookies"
+  },
+  "cookie": {
+    "text": "Este sitio usa solo cookies esenciales para el inicio de sesión y la seguridad. No se usan cookies de publicidad ni de analítica.",
+    "ok": "Entendido",
+    "more": "Política de cookies"
+  }
+}

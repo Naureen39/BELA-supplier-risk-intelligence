@@ -1,0 +1,85 @@
+export const meta = {
+  slug: "from-facility-to-parent",
+  title: "From facility to parent: reading corporate family trees in public filings",
+  summary:
+    "How ownership appears in public filings and registries, and why a record at a plant may concern your supplier.",
+  tag: "Corporate family",
+  date: "2026-09-15",
+  readMinutes: 6,
+};
+
+When a regulator records an event, it records it against something small: an establishment, a facility, a registered firm. The company a buyer contracts with is usually larger and sits several steps above that record. Connecting the two is the job of a corporate family tree.
+
+## Where ownership information comes from
+
+No single source describes who owns whom. Three public sources complement each other.
+
+**SEC Exhibit 21.** Companies that file annual reports with the United States Securities and Exchange Commission list their significant subsidiaries in Exhibit 21. The list names each subsidiary and its jurisdiction. It is a filing, so it carries a date, and it covers only significant subsidiaries chosen by the registrant.
+
+**GLEIF.** The Global Legal Entity Identifier Foundation publishes Level 2 relationship data that records, for entities with a Legal Entity Identifier, their direct and ultimate parents as reported by the entity. Coverage is broad internationally, but it depends on entities registering and reporting.
+
+**Wikidata.** The public knowledge base holds ownership and parent organization statements for many well-known companies, with references. It is community maintained, so quality varies and each statement should be read with its reference.
+
+Each source has gaps and different definitions of a parent. A system that combines them should keep the source and an as-of date on every edge so that a reader can see where a relationship came from.
+
+## What a family tree contains
+
+A useful model has four kinds of node and edge.
+
+- **Companies**, with identifiers where they exist.
+- **Aliases**, which are alternative names: legal, former, doing-business-as, abbreviations.
+- **Relationships**, which connect a parent to a child with a type, an ownership share when known, a source, and an as-of date.
+- **Facilities**, which are places with an address and, often, a registry identifier from a regulator, linked to a company with a stored confidence.
+
+The facility link is the weakest part. A regulator may know a plant by an operating name, and the firm that filed the registration may not be the one that owns the plant today.
+
+## Why the parent matters
+
+Consider a buyer with two suppliers under different names. A public record exists for a plant operated by a subsidiary of a parent company. Without ownership data, the buyer sees no connection. With it, the buyer sees that the plant belongs to the family of supplier A, and also to the family of supplier B because both sit under the same parent.
+
+Two practical questions follow.
+
+**Does the record concern this supplier?** The answer depends on the relationship. A record at a wholly owned operating subsidiary says something about the family. A record at a minority holding says much less. A system that rolls events up the tree should weight by relationship type and not treat all edges alike.
+
+**How concentrated is the supply base?** Counting suppliers by ultimate parent often shows that a list of fifty suppliers contains far fewer independent owners. That is a risk finding in itself, separate from any event.
+
+## Reading a tree with care
+
+Three habits prevent most misreadings.
+
+1. **Check the as-of date.** Ownership changes. A record filed before an acquisition belongs to the former owner's family. The edge date tells you which tree to read.
+2. **Separate ownership from control.** A minority stake and a majority stake do not support the same conclusion. Where the share is unknown, treat the edge as weaker.
+3. **Do not infer fault from position.** A parent appearing above a subsidiary with a record does not mean the parent did anything. The tree shows connection, not responsibility.
+
+## Common pitfalls
+
+- **Same name, different company.** Two companies in different states can share a name. Use state and address to separate them, and send ambiguous records to review.
+- **Names that changed.** A renamed company keeps its identifier but not its name. Former names belong in the alias table.
+- **Cycles and cross holdings.** Real ownership graphs can contain loops. A roll-up must limit depth and avoid counting the same record twice.
+- **Stale edges.** An edge without an as-of date cannot be checked. Show the date and prefer newer sources.
+
+## What to expect from the data
+
+Public ownership data is better for large listed companies than for private ones, and better for the United States than for most other countries. A family tree built from these sources is a starting point for review. Where a relationship matters to a decision, confirm it against the filing it came from.
+
+For a team using a tool that draws these trees, the useful questions are simple. Which source supports this edge? When was it true? How much weight does the roll-up give it? If the answers are visible, the tree supports judgment. If they are hidden, it only looks authoritative.
+
+## A worked illustration
+
+The following example uses fictional names.
+
+A buyer lists "Harborline Packaging LLC" as a supplier of cartons. A public workplace safety record names "Harborline Packaging of Ohio" at a plant in Columbus. A first pass of name matching proposes the supplier with moderate confidence, and the state in the buyer's list agrees. The reviewer accepts the link. A second record names "Harborline Containers Inc." at another plant, a name that is similar but not the same.
+
+The family tree resolves the second question. Both companies list the same parent in a registry entry with an as-of date from last year. The buyer now has one supplier with two operating subsidiaries, not two independent suppliers, and the records at both plants are relevant to the one commercial relationship. The roll-up gives the second record a lower weight than the first because it reaches the supplier through a parent edge rather than a direct match, and the score breakdown shows both weights.
+
+Nothing in this example says either plant did anything wrong. The tree explains why the records appear, and the record explains what the agency published.
+
+## Questions to ask of any family tree
+
+1. Which source supports each edge, and what is its date?
+2. Is the relationship direct or indirect, and how many steps are between the record and the supplier?
+3. What share does the parent hold, and is it a controlling share?
+4. Could a name collision have joined two unrelated companies?
+5. Has the corporate structure changed since the record was filed?
+
+Answering these takes minutes when the tool stores the evidence, and much longer when it does not. That is the practical argument for keeping the source and the date on every edge.

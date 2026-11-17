@@ -1,0 +1,97 @@
+export const meta = {
+  slug: "responsible-use-of-risk-signals",
+  title: "Responsible use of risk signals: records are not verdicts",
+  summary:
+    "Principles for using public-record signals about suppliers fairly, with examples of wording and process.",
+  tag: "Responsible use",
+  date: "2026-10-13",
+  readMinutes: 6,
+};
+
+A supplier risk score condenses many public records into one number. That is convenient, and it creates a duty. The number can move decisions about real businesses and the people who work in them. This article sets out principles for using such signals fairly.
+
+## Principle 1: A record states what it states
+
+A public record is a statement by a named body on a date. It is not a conclusion about conduct. Use language that keeps that distinction.
+
+| Preferred wording                                                            | Avoid                                   |
+| ---------------------------------------------------------------------------- | --------------------------------------- |
+| "The agency's record dated 14 March lists a citation at this establishment." | "The company violated safety rules."    |
+| "A recall notice names this firm as the manufacturer."                       | "The company sold a dangerous product." |
+| "A news article reports a fire at a plant associated with this company."     | "The company had a fire."               |
+
+The wording is not pedantry. A record may be contested, corrected, or withdrawn, and the person reading it may act on its first line.
+
+## Principle 2: Show the source and the date
+
+Every event shown against a supplier should carry its source, the date of the record, the date it was retrieved, and a link. A reader who can open the source can check it. A reader who cannot is asked to trust a summary.
+
+## Principle 3: Separate allegations, citations, and recalls from findings
+
+These are different things.
+
+- An **allegation** is a claim, often in a news article or a complaint.
+- A **citation** is an agency's statement of a condition it believes is a violation, which can be contested.
+- A **recall** is an action to remove or correct a product, which says little about fault.
+- A **finding** is the result of adjudication.
+
+A system should label which of these a record is, and should not present the first three as the fourth.
+
+## Principle 4: Show how sure the system is
+
+A signal depends on two judgments: that the record is accurate, and that it was linked to the right company. The second is a model decision with a probability. Show the link confidence. Keep low-confidence links out of scores and send them to review.
+
+## Principle 5: Keep a person in the loop
+
+Scores are leads for human review. They should prompt a question, a conversation with the supplier, or a closer reading. They should not trigger an adverse action without a person looking at the evidence. Product design can support this: require a reason when an alert is dismissed, record who reviewed what, and make the evidence one click away.
+
+## Principle 6: Give suppliers a way to correct the record
+
+Data about a business can be wrong. Names are matched incorrectly, ownership changes, and records are updated. A correction path should exist, be easy to find, and lead to a real review. A correction that is accepted should change what other users see, not only what one user sees.
+
+## Principle 7: State the limits
+
+- Coverage is uneven: structured regulator data in this kind of tool is mostly from the United States.
+- Absence of a record is not evidence of good practice.
+- Records age. A resolved issue may still appear.
+- Models make mistakes. A match with a stated probability can still be wrong.
+
+Putting these limits on the page where the score appears is more honest than burying them in a policy.
+
+## Principle 8: Make claims you can measure
+
+Statements about accuracy should be backed by a measurement on named data, and synthetic results should be labeled as such. Do not describe the product with certifications, customers, or awards it has not earned.
+
+## Principle 9: Protect the data
+
+Supplier lists can be commercially sensitive. Isolate each customer's data, encrypt sensitive identifiers, require multi-factor sign-in for administrators, and keep an audit log that records who did what. Limit retention to what the customer needs. Use customer feedback to train models only with opt-in consent, and without identifying the customer.
+
+## A checklist for a review
+
+Before acting on a signal, ask:
+
+1. What exactly does the record say, and who published it?
+2. How old is it, and has its status changed?
+3. How confident is the link to this supplier, and through which relationship?
+4. Is there another explanation, such as a name collision?
+5. What is the proportionate next step: ask the supplier, monitor, or escalate?
+6. Have I recorded my reasoning?
+
+## Closing
+
+A risk signal is a lead. Its value is that it helps a team ask better questions sooner. Its risk is that a number looks more certain than the evidence behind it. Presenting the source, the date, the confidence, and the limits keeps the number in proportion.
+
+## Putting the principles into the product
+
+Principles help only if the product makes them easy to follow. A few design choices carry most of the weight.
+
+- **Default wording is neutral.** Event titles and summaries state what a record says. Verbs that imply fault are not used.
+- **The disclaimer is always present.** The sentence "Risk signals are leads for human review and not statements of fault." appears on every supplier view and every report.
+- **Evidence is one step away.** Each component of a score links to the event, the source, and the retrieval date.
+- **Weights are visible.** A reader can see how severity, recency, link confidence, relationship, and source reliability combined into a number, and can see the version of the configuration that produced it.
+- **Dismissals need reasons.** An alert cannot be dismissed without a recorded reason, which makes later review possible.
+- **Configuration is bounded.** Customers can adjust weights within limits, so that a score cannot be tuned until it hides a record.
+
+## A note on proportion
+
+Not every signal deserves the same response. A single old, minor citation at a subsidiary of a large group is a prompt to note and move on. A recent, serious record directly linked to a sole-source supplier deserves a conversation. The score helps order the work. It should not decide which cases are serious. Teams that agree in advance on what each level means, and on who looks at it, avoid both over-reaction and neglect.

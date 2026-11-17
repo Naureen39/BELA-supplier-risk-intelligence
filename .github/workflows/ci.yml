@@ -35,3 +35,67 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    needs: web
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: pip install -e .
+      - run: |
+          export PYTHONPATH=.:apps/api
+          DATABASE_URL=$(python apps/web/e2e/seed_api.py postgresql://postgres:postgres@localhost:5432/postgres)
+          echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"
+      - run: |
+          PYTHONPATH=apps/api:. nohup uvicorn --factory app.main:create_app --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/v1/health/ready && break; sleep 1; done
+        env:
+          VALKEY_URL: redis://localhost:6379/0
+          COOKIE_SECURE: "false"
+          ALLOW_EPHEMERAL_SECRETS: "true"
+          WEB_BASE_URL: http://127.0.0.1:3000
+      - working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install --with-deps chrome
+          npm run build
+          npm run e2e
+        env:
+          API_ORIGIN: http://127.0.0.1:8000

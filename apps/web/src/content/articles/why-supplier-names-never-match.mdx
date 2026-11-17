@@ -1,0 +1,81 @@
+export const meta = {
+  slug: "why-supplier-names-never-match",
+  title: "Why supplier names never match: the hidden cost of messy master data",
+  summary:
+    "The same company appears under many names. What that does to risk monitoring, and what a matching system has to handle.",
+  tag: "Data quality",
+  date: "2026-09-08",
+  readMinutes: 6,
+};
+
+A supplier list looks simple: one row per company. In practice a single company can appear as an uppercase legal name in the accounts payable system, a trading name in the contract database, and an abbreviation in a quality report. Each spelling is correct in its own system. Together they make a problem that surfaces only when someone tries to join the data.
+
+## What goes wrong
+
+Three failures are common, and they pull in opposite directions.
+
+**Missed matches.** An exact comparison treats `ACME FOODS INC` and `Acme Foods, Incorporated` as different companies. A public record filed under one spelling never reaches the supplier recorded under the other. The reader sees no signal and concludes there is none.
+
+**Wrong matches.** A loose comparison fixes the first problem and creates a worse one. Two companies with similar names, such as a regional distributor and an unrelated manufacturer that share a word, get joined. A record about one is then attached to the other. This is a false link, and it is harder to notice than a missed match because the result looks like a finding.
+
+**Hidden relationships.** Even when names match, the company named in a record is often not the one a buyer pays. Records are filed against plants, subsidiaries, and operating names. The parent company that signs the contract may not appear at all.
+
+## The sources of variation
+
+Names vary for ordinary reasons, and a system has to expect all of them.
+
+- **Legal suffixes.** `Inc`, `Inc.`, `Incorporated`, `Corp`, `Corporation`, `LLC`, and `L.L.C.` describe the same legal form but compare as different strings.
+- **Punctuation, case, and articles.** Commas, periods, a leading "The", and capitalization differ between systems.
+- **Abbreviations.** `International` becomes `Intl`, `Manufacturing` becomes `Mfg`, `Group` becomes `Grp`.
+- **Typing errors.** A transposed or neighboring key is enough to change a token.
+- **Location and site suffixes.** A plant record may read `Acme Foods Plant 3` or `Acme Foods of Ohio`.
+- **Doing-business-as names.** A brand and a legal entity are different names for related things.
+- **Reorganization.** A company renamed after an acquisition keeps an older name in older records.
+
+None of these is an error by the person who entered the data. They are the normal result of many people and systems describing the same company over many years.
+
+## What messy data costs
+
+The cost is rarely a single event. It is a steady loss of confidence in every report built on the list.
+
+- **Duplicate suppliers** inflate counts and hide concentration. Two rows that are one company under one parent look like diversification.
+- **Unmatched records** mean a monitoring program watches only part of the supply base while appearing complete.
+- **Manual reconciliation** takes analyst time, differs from person to person, and leaves no record of why a choice was made.
+- **False links** can cause a team to act on a record that does not concern the supplier. Trust in the program falls after the first mistake.
+
+## What a matching system has to do
+
+A system that reads supplier names has to separate three questions that are easy to blur.
+
+1. **Is this the same company as a company we know?** This is entity resolution against a canonical list.
+2. **How sure is the system?** The answer is a score with a stated meaning, not only a label.
+3. **What should happen when it is not sure?** Uncertain cases go to a person with the evidence, and cases with no good candidate stay unresolved.
+
+The third question is where most simple approaches fail. A fixed similarity threshold forces every row into either "match" or "no match". Real data has a middle band where a person should decide. Routing that band to review, and recording the decision, turns an error-prone guess into a controlled process.
+
+## Normalization is necessary but not sufficient
+
+Cleaning names first helps a great deal. Lowercasing, removing punctuation, expanding or collapsing common abbreviations, and stripping legal suffixes remove much of the noise. This step is cheap and should be done before anything else.
+
+It does not solve the harder cases. Two different companies can normalize to the same string. Two spellings of one company can stay far apart after cleaning, for example a trading name and a legal name. Extra evidence is needed: state, city, address, website, and identifiers such as an SEC Central Index Key or a Legal Entity Identifier when they exist.
+
+## Identifiers first, names second
+
+When a record carries an identifier, use it. A Legal Entity Identifier or an SEC Central Index Key points to exactly one entity. Identifier matches should be accepted without scoring, and a conflict between identifiers should send the record to review instead of being resolved by name.
+
+Most supplier lists have few identifiers, and most regulator records have none. Name matching with supporting attributes carries the rest of the load. For that part, a probabilistic approach that weighs agreement and disagreement across several fields works better than a single string score, because it can learn that a matching state counts for more than a matching common word.
+
+## Keep the evidence
+
+Whatever the method, store the result with its method, its score, the route taken, and every candidate considered. An analyst who questions a match later should be able to see what the system saw. That record is also what makes measurement possible: you cannot compute precision or review workload from decisions that were not kept.
+
+## A practical starting point
+
+A team facing a messy supplier list can make progress without any new tooling.
+
+1. Count how many rows have an identifier, a state, and a street address. These are the fields that make matching reliable.
+2. Normalize names and look at the largest groups of near-duplicates by eye. This shows which variations matter in your data.
+3. Decide in advance what level of confidence is acceptable to accept without review, and measure it on a labeled sample.
+4. Keep a list of known corrections so that a decision made once is not made again.
+
+Matching is a data problem before it is a modelling problem. The earlier the variation is understood, the less the review queue has to absorb.

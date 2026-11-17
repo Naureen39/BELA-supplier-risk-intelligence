@@ -1,0 +1,38 @@
+{
+  "nav": {
+    "platform": "Plateforme",
+    "solutions": "Solutions",
+    "industries": "Secteurs",
+    "resources": "Ressources",
+    "pricing": "Tarifs",
+    "company": "Entreprise",
+    "login": "Se connecter",
+    "demo": "Demander une démonstration",
+    "menu": "Menu",
+    "close": "Fermer",
+    "skip": "Aller au contenu principal"
+  },
+  "utility": {
+    "support": "Assistance",
+    "status": "État",
+    "developers": "Développeurs",
+    "language": "Langue",
+    "unavailable": "Traduction pas encore disponible"
+  },
+  "footer": {
+    "newsletter": "Articles par courriel",
+    "newsletterHint": "Articles occasionnels sur les données fournisseurs et les signaux de risque. Confirmez par courriel pour vous abonner.",
+    "email": "Adresse courriel",
+    "subscribe": "S'abonner",
+    "disclaimer": "Les signaux de risque sont des pistes pour examen humain et non des déclarations de faute.",
+    "credits": "Sources de données : SEC, GLEIF, Wikidata, EPA, Département du Travail des États-Unis, NHTSA, CPSC, FDA, GDELT. Fondé sur les versions open source de BELA et BLINK ; sans affiliation avec leurs auteurs.",
+    "privacy": "Confidentialité",
+    "terms": "Conditions",
+    "cookies": "Cookies"
+  },
+  "cookie": {
+    "text": "Ce site utilise uniquement des cookies essentiels pour la connexion et la sécurité. Aucun cookie publicitaire ou d'analyse n'est utilisé.",
+    "ok": "Compris",
+    "more": "Politique de cookies"
+  }
+}

@@ -1,0 +1,77 @@
+export const meta = {
+  slug: "entity-resolution-in-practice",
+  title: "Entity resolution in practice: retrieval, scoring, and human review",
+  summary:
+    "The stages of a matching pipeline, why each exists, and how uncertain cases reach a reviewer.",
+  tag: "Methodology",
+  date: "2026-09-22",
+  readMinutes: 7,
+};
+
+Entity resolution is the task of deciding which records describe the same real-world entity. For supplier risk the entities are companies, the records are uploaded rows, regulator filings, and mentions in text, and the answer drives which public records appear against which supplier. This article describes a pipeline in stages. Each stage solves a specific problem, and each leaves evidence behind.
+
+## Stage 1: Normalize
+
+Names are cleaned before comparison. Case, punctuation, a leading "The", and common legal suffixes are normalized, and a small set of abbreviations is expanded. The original text is always kept. Normalization is deterministic, fast, and explains itself, so it comes first.
+
+## Stage 2: Match identifiers
+
+If a record carries an identifier that exists in the canonical list, the match is decided without scoring. Examples are an SEC Central Index Key, a Legal Entity Identifier, a stock ticker, or a website domain. Two rules protect against mistakes. When several identifiers on one record point to different companies, the record goes to review. When an identifier points to one company but the name is very different, the discrepancy is shown to the reviewer.
+
+## Stage 3: Retrieve candidates
+
+Comparing a record with every company in the knowledge base is too slow and gives the scorer too many chances to be wrong. Retrieval narrows the field to a short list of plausible candidates. Common approaches combine:
+
+- **Trigram similarity**, which finds names that share character sequences and tolerates typing errors.
+- **Dense embeddings**, which find names that are close in meaning even when they share few characters, such as a trading name and a legal name.
+- **A learned retriever** trained on the knowledge base, when enough labeled pairs exist.
+
+The union of the lists is passed on. The goal of this stage is recall: the right company should be somewhere in the short list. Precision is the job of the next stage.
+
+## Stage 4: Score pairs
+
+For each record and candidate, a set of features is computed: how similar the names are after normalization, whether the states agree or disagree, whether the cities agree, whether the industry codes are compatible, and how the retrieval scores rank. A probabilistic model in the Fellegi-Sunter family turns these features into a weight. Each feature contributes evidence for or against a match, estimated from labeled pairs. The weights are then combined with the retrieval signals and calibrated into a probability.
+
+Calibration matters. A score of 0.9 should mean that about nine in ten such matches are correct on data like the training data. Without calibration, thresholds are guesses. The calibration status should be visible: a system that has not yet been calibrated on gold labels must say so.
+
+## Stage 5: Route
+
+The final step compares the top probability, and its margin over the second candidate, with thresholds.
+
+| Route            | Condition                                                   | What happens                            |
+| ---------------- | ----------------------------------------------------------- | --------------------------------------- |
+| Exact identifier | One company matches by identifier                           | Accepted                                |
+| Accepted         | Probability above the accept threshold and a clear margin   | Accepted and logged                     |
+| Review           | Between the review and accept thresholds, or a small margin | Shown to a reviewer with the candidates |
+| Unresolved       | No candidate above the review threshold                     | Left unresolved                         |
+
+The margin rule prevents a common failure: two near-identical candidates, one scoring 0.91 and the other 0.90, should not be resolved automatically even though the top score is high.
+
+An unresolved record is never silently attached to a company. That rule matters more than any threshold. The cost of a wrong link is higher than the cost of an unmatched row, because a wrong link looks like a finding.
+
+## Stage 6: Review
+
+Reviewers see the uploaded record beside each candidate, with the field-by-field agreement and the scores. They can accept the top candidate, choose another company, reject, mark the record unresolved, or state that the company is not in the database. Bulk accept above a chosen confidence speeds up the easy cases. Every decision is stored with who made it and when.
+
+Review decisions are also training data. When a customer opts in, labeled decisions can be stored without any customer identifier and used later to improve the model. The default is off.
+
+## Stage 7: Roll up
+
+After resolution, a record can be connected to the corporate family. A regulator record at a subsidiary reaches the supplier's parent through ownership edges, weighted by relationship type. The roll-up depth is limited, and the path from the record to the supplier is shown.
+
+## Handling text
+
+The same pipeline applies to company mentions in news articles, with extra steps. Sentences are extracted, a mention detector finds company names, and a linker proposes candidates. Text from outside the platform is untrusted input. It is delimited and sanitized before any language model sees it, the model is asked for a structured response that is validated against a schema, and instructions inside an article are ignored. When a model service is unavailable, the pipeline falls back to a simpler method and marks the result as reduced confidence.
+
+## What to store
+
+Every resolution should record the method, the score, the route, the model version, and every candidate considered. That makes three things possible: an analyst can inspect a match, a reviewer can see why a record was routed to them, and the team can measure the system over time.
+
+## Where it can fail
+
+- **Thin attributes.** A record with only a short name and no state offers little evidence. Expect more review.
+- **Common names.** Companies with generic names produce many plausible candidates. The margin rule helps.
+- **Out-of-scope entities.** Private companies and companies outside the covered jurisdictions may not be in the knowledge base. The correct outcome is unresolved, not the nearest name.
+- **Drift.** Names and ownership change. Retrain and recalibrate on fresh labeled data.
+
+A pipeline like this will not remove the need for people. Its purpose is to make the work reviewable: most rows are decided quickly, uncertain rows are surfaced with evidence, and the whole process leaves a record that can be measured.

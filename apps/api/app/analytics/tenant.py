@@ -251,11 +251,14 @@ def read_eval_metrics(path: str) -> dict[str, Any] | None:
         raw = json.loads(f.read_text())
     except (OSError, ValueError):
         return None
-    systems = []
-    for name, m in sorted((raw.get("systems") or {}).items()):
-        v = m.get("false_links_per_1000")
-        systems.append({"system": name, "false_links_per_1000": None if v != v else v,
-                        "accuracy_at_1": m.get("accuracy@1")})
+    def num(m: dict[str, Any], key: str) -> float | None:
+        x = m.get(key)
+        return None if x is None or x != x else float(x)  # NaN is not served
+
+    systems = [{"system": name, "false_links_per_1000": num(m, "false_links_per_1000"),
+                "accuracy_at_1": num(m, "accuracy@1"), "precision": num(m, "precision"),
+                "recall": num(m, "recall"), "review_rate": num(m, "review_rate")}
+               for name, m in sorted((raw.get("systems") or {}).items())]
     return {"data": raw.get("data"), "records": raw.get("n"), "config_status": raw.get("config_status"),
             "systems": systems}
 

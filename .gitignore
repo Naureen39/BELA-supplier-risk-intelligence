@@ -14,3 +14,11 @@ models/
 var/
 # Regenerable demo business data (make demo-data)
 data/synthetic/
+# Web app (Phase 8)
+apps/web/node_modules/
+apps/web/.next/
+apps/web/reports/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/next-env.d.ts
+apps/web/*.tsbuildinfo

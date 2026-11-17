@@ -1,0 +1,258 @@
+{
+  "375 /": {
+    "violations": [],
+    "passes": 50
+  },
+  "375 /platform": {
+    "violations": [],
+    "passes": 46
+  },
+  "375 /pricing": {
+    "violations": [],
+    "passes": 52
+  },
+  "375 /security": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /developers": {
+    "violations": [],
+    "passes": 50
+  },
+  "375 /methodology": {
+    "violations": [],
+    "passes": 52
+  },
+  "375 /resources": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /company": {
+    "violations": [],
+    "passes": 47
+  },
+  "375 /contact": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /contact/thanks": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /solutions/procurement-and-supply-chain": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /solutions/third-party-risk": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /solutions/insurance-and-lending": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /solutions/esg-and-investment-research": {
+    "violations": [],
+    "passes": 46
+  },
+  "375 /industries/manufacturing": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /industries/automotive": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /industries/food-and-beverage": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /industries/consumer-products": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /industries/healthcare-and-life-sciences": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /industries/logistics": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/why-supplier-names-never-match": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/from-facility-to-parent": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/entity-resolution-in-practice": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/what-regulator-data-can-and-cannot-tell-you": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/measuring-a-matching-system": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /resources/responsible-use-of-risk-signals": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /legal/privacy": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /legal/terms": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /legal/cookies": {
+    "violations": [],
+    "passes": 45
+  },
+  "375 /login": {
+    "violations": [],
+    "passes": 36
+  },
+  "375 /forgot-password": {
+    "violations": [],
+    "passes": 36
+  },
+  "375 /reset-password?token=e2e-reset-token-0123456789": {
+    "violations": [],
+    "passes": 36
+  },
+  "1280 /": {
+    "violations": [],
+    "passes": 50
+  },
+  "1280 /platform": {
+    "violations": [],
+    "passes": 47
+  },
+  "1280 /pricing": {
+    "violations": [],
+    "passes": 52
+  },
+  "1280 /security": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /developers": {
+    "violations": [],
+    "passes": 49
+  },
+  "1280 /methodology": {
+    "violations": [],
+    "passes": 52
+  },
+  "1280 /resources": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /company": {
+    "violations": [],
+    "passes": 48
+  },
+  "1280 /contact": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /contact/thanks": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /solutions/procurement-and-supply-chain": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /solutions/third-party-risk": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /solutions/insurance-and-lending": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /solutions/esg-and-investment-research": {
+    "violations": [],
+    "passes": 47
+  },
+  "1280 /industries/manufacturing": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /industries/automotive": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /industries/food-and-beverage": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /industries/consumer-products": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /industries/healthcare-and-life-sciences": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /industries/logistics": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/why-supplier-names-never-match": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/from-facility-to-parent": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/entity-resolution-in-practice": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/what-regulator-data-can-and-cannot-tell-you": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/measuring-a-matching-system": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /resources/responsible-use-of-risk-signals": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /legal/privacy": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /legal/terms": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /legal/cookies": {
+    "violations": [],
+    "passes": 46
+  },
+  "1280 /login": {
+    "violations": [],
+    "passes": 35
+  },
+  "1280 /forgot-password": {
+    "violations": [],
+    "passes": 35
+  },
+  "1280 /reset-password?token=e2e-reset-token-0123456789": {
+    "violations": [],
+    "passes": 34
+  }
+}
