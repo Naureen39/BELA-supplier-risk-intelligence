@@ -62,7 +62,7 @@ Not done:
 - **Load and latency numbers** are Phase 10.
 - **PDF reports** are Phase 6: `POST /reports/*` records the request and returns `queued`.
 - **Rate limit values, lock durations, and token lifetimes** are defaults, not tuned.
-- Platform revenue endpoints are minimal (MRR by plan and a summary); Phase 7 builds the full set.
+- Revenue and analytics endpoints are covered in `docs/metrics.md` (Phase 7).
 - Celery scheduling is not wired; `services/alerts.py` and the Phase 4 `recompute` are the functions
   a scheduled task will call.
 - The tenant `retention_days` setting is stored, but no purge job exists yet.

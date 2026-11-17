@@ -12,3 +12,5 @@ data/training/*.jsonl
 .coverage
 models/
 var/
+# Regenerable demo business data (make demo-data)
+data/synthetic/

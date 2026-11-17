@@ -9,6 +9,7 @@ from app.auth.crypto import DataCipher
 from app.auth.passwords import PasswordService
 from app.auth.service import AuthService
 from app.auth.tokens import TokenService
+from app.core.cache import Cache, MemoryCache, make_cache
 from app.core.mailer import Mailer, MemoryMailer, SmtpMailer
 from app.core.ratelimit import RateLimiter, make_limiter
 from app.db import Database
@@ -29,6 +30,7 @@ class Container:
     auth: AuthService
     cursor_secret: bytes
     resolver_cache: dict[str, Any] = field(default_factory=dict)
+    cache: Cache = field(default_factory=MemoryCache)
 
     @classmethod
     def build(cls, settings: Settings, db: Database | None = None, mailer: Mailer | None = None,
@@ -42,4 +44,5 @@ class Container:
         secret = (settings.cursor_secret or cipher.raw_key).encode()
         return cls(settings, db, limiter or make_limiter(settings.valkey_url),
                    broker or make_broker(settings.valkey_url), passwords, tokens, cipher, mail,
-                   AuthService(db, settings, passwords, tokens, cipher, mail), secret)
+                   AuthService(db, settings, passwords, tokens, cipher, mail), secret,
+                   cache=make_cache(settings.valkey_url))

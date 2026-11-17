@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 import pytest
+from app.analytics.revenue import refresh_views
 from conftest import Api, World, seed_catalog, seed_event
 
 CSV = (
@@ -322,7 +323,7 @@ def test_reports_sources_analytics_billing(world: World) -> None:
     assert src["counts"]["companies"] == 5 and src["event_sources"][0]["source"] == "osha"
     assert "US" in src["coverage_note"]
     port = mgr.get("/analytics/portfolio").json()
-    assert port["suppliers_by_status"] and port["events_by_type"] == {"workplace_safety": 1}
+    assert port["totals"]["suppliers_by_status"] and port["totals"]["events_by_type"] == {"workplace_safety": 1}
     assert "auto_resolution_rate" in mgr.get("/analytics/quality").json()
     assert mgr.get("/analytics/usage").json()["demo_data"] is True
     admin = Api(world).as_role("a", "tenant_admin")
@@ -351,7 +352,9 @@ def test_platform_tenants_review_queue_and_revenue(world: World) -> None:
         conn.execute("INSERT INTO plans (code, name, monthly_price, supplier_limit) VALUES ('pro','Pro',1999,2500)")
         conn.execute("INSERT INTO subscriptions (tenant_id, plan_code, billing_cycle, price, started_on) "
                      "VALUES (%s,'pro','monthly',1999,'2023-11-01')", (world.tenant_a,))
-        conn.execute("REFRESH MATERIALIZED VIEW mrr_monthly")
+        conn.execute("INSERT INTO invoices (tenant_id, period_month, issued_on, due_on, status, total) "
+                     "VALUES (%s,'2026-10-01','2026-10-31','2026-11-30','open',1999)", (world.tenant_a,))
+        refresh_views(conn)
     fin = Api(world).as_role("platform", "finance_analyst")
     summary = fin.get("/platform/revenue/summary").json()
     assert summary["demo_data"] and summary["mrr"] == 1999 and summary["arr"] == 1999 * 12

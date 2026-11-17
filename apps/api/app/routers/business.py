@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import date
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
 
@@ -12,12 +11,11 @@ from app.auth import deps
 from app.auth import permissions as P
 from app.auth.deps import Principal
 from app.container import Container
-from app.core.csvsafe import to_csv
 from app.core.errors import ApiError
 from app.routers.common import audit_event, jsonable, parse_uuid
 from app.services.reports import generate_report
 
-router = APIRouter(tags=["reports", "sources", "analytics", "billing"])
+router = APIRouter(tags=["reports", "sources", "billing"])
 manager = deps.require(P.MANAGE_RULES)
 tenant_admin = deps.require_session(P.MANAGE_USERS)
 DISCLAIMER = "Risk signals are leads for human review and not statements of fault."
@@ -110,60 +108,6 @@ def sources(p: Principal = Depends(manager), conn: Any = deps.TENANT_DB) -> dict
                       "FROM events GROUP BY source ORDER BY source").fetchall()
     return {"counts": counts, "event_sources": [jsonable(r) for r in ev], "licenses": LICENSES,
             "coverage_note": COVERAGE_NOTE}
-
-
-# ------------------------------------------------------------------ analytics
-@router.get("/analytics/portfolio", summary="Portfolio risk summary")
-def analytics_portfolio(days: int = 30, p: Principal = Depends(manager),
-                        conn: Any = deps.TENANT_DB) -> dict[str, Any]:
-    days = min(max(days, 1), 3650)
-    by_status = conn.execute("SELECT status, count(*) AS n FROM suppliers WHERE duplicate_of IS NULL "
-                             "GROUP BY status").fetchall()
-    levels = conn.execute(
-        "SELECT rs.level, count(*) AS n FROM suppliers s JOIN LATERAL (SELECT level FROM risk_scores r "
-        "WHERE r.supplier_id = s.id ORDER BY computed_at DESC, id DESC LIMIT 1) rs ON true "
-        "GROUP BY rs.level").fetchall()
-    events = conn.execute(
-        "SELECT e.event_type, count(DISTINCT e.id) AS n FROM events e JOIN event_entities ee ON ee.event_id = e.id "
-        "JOIN suppliers s ON s.resolved_company_id = ee.company_id WHERE ee.route = 'accepted' "
-        "AND e.reported_at >= now() - make_interval(days => %s) GROUP BY e.event_type ORDER BY n DESC",
-        (days,)).fetchall()
-    open_alerts = conn.execute("SELECT count(*) AS n FROM alerts WHERE status IN ('new','in_review')"
-                               ).fetchone()["n"]
-    return {"days": days, "suppliers_by_status": {r["status"]: r["n"] for r in by_status},
-            "suppliers_by_level": {r["level"]: r["n"] for r in levels},
-            "events_by_type": {r["event_type"]: r["n"] for r in events}, "open_alerts": open_alerts,
-            "disclaimer": DISCLAIMER}
-
-
-@router.get("/analytics/quality", summary="Resolution quality and review workload")
-def analytics_quality(p: Principal = Depends(manager), conn: Any = deps.TENANT_DB
-                      ) -> dict[str, Any]:
-    status = conn.execute("SELECT status, count(*) AS n FROM suppliers GROUP BY status").fetchall()
-    reviews = conn.execute("SELECT status, count(*) AS n FROM resolution_reviews GROUP BY status").fetchall()
-    median = conn.execute(
-        "SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM decided_at - created_at) / 60) "
-        "AS minutes FROM resolution_reviews WHERE decided_at IS NOT NULL").fetchone()["minutes"]
-    total = sum(r["n"] for r in status) or 1
-    auto = sum(r["n"] for r in status if r["status"] == "auto_resolved")
-    return {"resolution_status": {r["status"]: r["n"] for r in status},
-            "reviews": {r["status"]: r["n"] for r in reviews},
-            "auto_resolution_rate": auto / total,
-            "median_review_minutes": float(median) if median is not None else None}
-
-
-@router.get("/analytics/usage", summary="Daily usage (demo data)")
-def analytics_usage(start: date | None = None, end: date | None = None,
-                    format: Literal["json", "csv"] = "json", p: Principal = Depends(manager),
-                    conn: Any = deps.TENANT_DB) -> Any:
-    rows = conn.execute(
-        "SELECT day, monitored_suppliers, resolutions, events_matched, alerts, api_calls FROM usage_daily "
-        "WHERE (%s::date IS NULL OR day >= %s::date) AND (%s::date IS NULL OR day <= %s::date) "
-        "ORDER BY day", (start, start, end, end)).fetchall()
-    if format == "csv":
-        cols = ["day", "monitored_suppliers", "resolutions", "events_matched", "alerts", "api_calls"]
-        return Response(to_csv(cols, [[r[k] for k in cols] for r in rows]), media_type="text/csv")
-    return {"demo_data": True, "items": [jsonable(r) for r in rows]}
 
 
 # ------------------------------------------------------------------ billing

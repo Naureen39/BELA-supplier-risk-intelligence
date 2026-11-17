@@ -53,6 +53,7 @@ class Settings:
     report_dir: str = "var/reports"
     demo_mode: bool = True  # reports and views label synthetic tenant data
     webhook_timeout: float = 5.0
+    eval_metrics_path: str = "docs/eval/metrics.json"  # written by `make eval`
     mandatory_mfa_roles: frozenset[str] = field(
         default_factory=lambda: frozenset({"tenant_admin", "platform_admin"}))
 
@@ -72,4 +73,5 @@ class Settings:
             allow_ephemeral_secrets=_bool("ALLOW_EPHEMERAL_SECRETS", False),
             report_dir=os.environ.get("REPORT_DIR", "var/reports"),
             demo_mode=_bool("DEMO_MODE", True),
+            eval_metrics_path=os.environ.get("EVAL_METRICS_PATH", "docs/eval/metrics.json"),
         )

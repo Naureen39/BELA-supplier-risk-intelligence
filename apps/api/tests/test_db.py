@@ -162,6 +162,9 @@ def test_business_views_refresh(db_url):
         tid = conn.execute("INSERT INTO tenants (name) VALUES ('Fictional Tenant') RETURNING id").fetchone()[0]
         conn.execute("INSERT INTO subscriptions (tenant_id, plan_code, billing_cycle, price, started_on)"
                      " VALUES (%s,'starter','annual',5389.20,'2024-01-15')", (tid,))
+        # The views run from the first subscription month to the latest month with billing data.
+        conn.execute("INSERT INTO invoices (tenant_id, period_month, issued_on, due_on, status, total) "
+                     "VALUES (%s,'2024-03-01','2024-03-31','2024-04-30','paid',449.10)", (tid,))
         conn.execute("REFRESH MATERIALIZED VIEW mrr_monthly")
         conn.execute("REFRESH MATERIALIZED VIEW cohort_retention")
         mrr = conn.execute("SELECT mrr FROM mrr_monthly WHERE month_start='2024-02-01'").fetchone()[0]

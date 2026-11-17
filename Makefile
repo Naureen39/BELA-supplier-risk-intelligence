@@ -3,7 +3,7 @@ export PYTHONPATH := .
 # WeasyPrint finds Pango here on macOS with Homebrew; harmless elsewhere.
 export DYLD_FALLBACK_LIBRARY_PATH ?= /opt/homebrew/lib
 
-.PHONY: ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -83,6 +83,20 @@ eval-events:
 	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.events.evaluation --gold ../../data/gold/events.jsonl --out ../../docs/eval/event_labeling.md
 
 # Phase 5: API. Needs DATABASE_URL (after make migrate) and, outside development, the secrets in .env.example.
+# Phase 7: demo business data, revenue views, and demo portfolios. Demo data only.
+demo-data:
+	$(PY) -m data.scripts.generate_demo_business_data
+
+load-demo-data: demo-data
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.analytics.loader --dir ../../data/synthetic
+
+# Run nightly (cron or the scheduler) and after loading data.
+metrics-refresh:
+	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.analytics.loader --refresh-only
+
+demo-portfolios:
+	PYTHONPATH=.:apps/api $(PY) -m data.scripts.generate_demo_portfolios --from-db
+
 api:
 	PYTHONPATH=apps/api:. .venv/bin/uvicorn --factory app.main:create_app --host 127.0.0.1 --port 8000 --reload
 

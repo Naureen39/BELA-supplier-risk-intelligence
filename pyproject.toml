@@ -27,6 +27,7 @@ dependencies = [
   "uvicorn",
   "prometheus-client",
   "weasyprint",
+  "statsmodels",
 ]
 
 [project.optional-dependencies]

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import secrets
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, EmailStr, Field
 
 from app.auth import deps
@@ -17,7 +17,6 @@ from app.routers.common import audit_event, jsonable, keyset, page
 
 router = APIRouter(prefix="/platform", tags=["platform"])
 platform_admin = deps.require_session(P.PLATFORM)
-revenue_viewer = deps.require_session(P.VIEW_REVENUE)
 
 
 class TenantIn(BaseModel):
@@ -89,29 +88,3 @@ def review_decide(entity_id: int, body: ReviewDecision, p: Principal = Depends(p
     audit_event(c, p, "platform.review_decided", "event_entity", str(entity_id),
                 {"decision": body.decision, "company_id": body.company_id})
     return {"id": entity_id, "decision": body.decision}
-
-
-@router.get("/revenue/mrr", summary="Monthly recurring revenue by plan")
-def revenue_mrr(start: Annotated[str | None, Query(alias="from")] = None, to: str | None = None,
-                p: Principal = Depends(revenue_viewer), conn: Any = deps.TENANT_DB
-                ) -> dict[str, Any]:
-    rows = conn.execute(
-        "SELECT month_start, plan_code, sum(mrr) AS mrr, count(DISTINCT tenant_id) AS customers "
-        "FROM mrr_monthly WHERE (%s::date IS NULL OR month_start >= %s::date) AND "
-        "(%s::date IS NULL OR month_start <= %s::date) GROUP BY 1, 2 ORDER BY 1, 2",
-        (start, start, to, to)).fetchall()
-    return {"demo_data": True, "items": [jsonable(r) for r in rows]}
-
-
-@router.get("/revenue/summary", summary="Latest MRR, ARR, and customers")
-def revenue_summary(p: Principal = Depends(revenue_viewer), conn: Any = deps.TENANT_DB
-                    ) -> dict[str, Any]:
-    row = conn.execute(
-        "SELECT month_start, sum(mrr) AS mrr, count(DISTINCT tenant_id) AS customers "
-        "FROM mrr_monthly WHERE month_start = (SELECT max(month_start) FROM mrr_monthly) "
-        "GROUP BY month_start").fetchone()
-    if not row:
-        return {"demo_data": True, "month": None, "mrr": 0, "arr": 0, "customers": 0}
-    mrr = float(row["mrr"])
-    return {"demo_data": True, "month": row["month_start"], "mrr": mrr, "arr": mrr * 12,
-            "customers": int(row["customers"])}
