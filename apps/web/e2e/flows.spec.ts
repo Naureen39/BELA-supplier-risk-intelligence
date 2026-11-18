@@ -1,22 +1,7 @@
-import { createHmac } from "node:crypto";
+import { totp } from "./totp";
 import { expect, test } from "@playwright/test";
 
 const PASSWORD = "Violet-Harbor-Quartz-7421";
-
-function totp(secret: string): string {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  let bits = "";
-  for (const ch of secret.replace(/=+$/, "").toUpperCase())
-    bits += alphabet.indexOf(ch).toString(2).padStart(5, "0");
-  const bytes = Buffer.from(bits.match(/.{8}/g)!.map((b) => parseInt(b, 2)));
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const h = createHmac("sha1", bytes).update(counter).digest();
-  const o = h[h.length - 1]! & 15;
-  const code =
-    (((h[o]! & 127) << 24) | (h[o + 1]! << 16) | (h[o + 2]! << 8) | h[o + 3]!) % 1_000_000;
-  return String(code).padStart(6, "0");
-}
 
 test("sign in as a manager lands on /app", async ({ page }) => {
   await page.goto("/login");
@@ -24,15 +9,16 @@ test("sign in as a manager lands on /app", async ({ page }) => {
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/app$/);
-  await expect(page.getByText("manager@demo.example")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   const cookies = await page.context().cookies();
   const access = cookies.find((c) => c.name === "pr_access");
   expect(access?.httpOnly).toBe(true);
   expect(cookies.find((c) => c.name === "pr_csrf")?.httpOnly).toBe(false);
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("button", { name: "User menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/login/);
   await page.goto("/app");
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test("wrong password shows one generic message", async ({ page }) => {
@@ -49,7 +35,7 @@ test("administrator enrolls multi-factor sign-in, then signs in with a code", as
   context,
 }) => {
   await page.goto("/login");
-  await page.getByLabel("Email").fill("admin@demo.example");
+  await page.getByLabel("Email").fill("admin2@demo.example");
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Set up multi-factor sign-in" })).toBeVisible();
@@ -59,7 +45,7 @@ test("administrator enrolls multi-factor sign-in, then signs in with a code", as
   await expect(page).toHaveURL(/\/app$/);
   await context.clearCookies();
   await page.goto("/login");
-  await page.getByLabel("Email").fill("admin@demo.example");
+  await page.getByLabel("Email").fill("admin2@demo.example");
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByLabel("Six-digit code")).toBeVisible();

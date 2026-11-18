@@ -9,10 +9,10 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-brand-600 text-white shadow-[var(--shadow-1)] hover:bg-[#1a52a6] active:translate-y-px",
+          "bg-brand-600 text-[#ffffff] shadow-[var(--shadow-1)] hover:bg-[#1a52a6] active:translate-y-px",
         secondary: "border border-line bg-white text-ink hover:bg-slate-50",
         ghost: "text-ink hover:bg-slate-100",
-        destructive: "bg-danger text-white hover:bg-[#a53125]",
+        destructive: "bg-danger text-[#ffffff] hover:bg-[#a53125]",
       },
       size: { sm: "h-9 px-3 text-sm", md: "h-11 px-5 text-[15px]", lg: "h-12 px-6 text-base" },
     },

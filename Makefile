@@ -110,7 +110,8 @@ web-build:
 web-check:
 	cd apps/web && npx prettier --check . && npm run lint && npm run typecheck && npm test
 
-# End to end tests: needs the API running (make api) against a database seeded by seed_api.py.
+# End to end tests. Run apps/web/e2e/reset.sh first (see docs/app.md): it seeds the database, starts the API,
+# and uploads the demo supplier list. The suite changes data, so reset before every full run.
 web-e2e:
 	cd apps/web && API_ORIGIN=http://127.0.0.1:8000 npm run e2e
 

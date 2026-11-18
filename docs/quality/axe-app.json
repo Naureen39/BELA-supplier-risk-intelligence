@@ -1,0 +1,102 @@
+{
+  "light /app": {
+    "violations": [],
+    "passes": 43
+  },
+  "light /app/suppliers": {
+    "violations": [],
+    "passes": 47
+  },
+  "light /app/reviews": {
+    "violations": [],
+    "passes": 44
+  },
+  "light /app/events": {
+    "violations": [],
+    "passes": 47
+  },
+  "light /app/events/1": {
+    "violations": [],
+    "passes": 44
+  },
+  "light /app/alerts": {
+    "violations": [],
+    "passes": 50
+  },
+  "light /app/explorer?company=1": {
+    "violations": [],
+    "passes": 47
+  },
+  "light /app/sources": {
+    "violations": [],
+    "passes": 44
+  },
+  "light /app/reports": {
+    "violations": [],
+    "passes": 40
+  },
+  "light /app/analytics": {
+    "violations": [],
+    "passes": 49
+  },
+  "light /app/settings": {
+    "violations": [],
+    "passes": 38
+  },
+  "dark /app": {
+    "violations": [],
+    "passes": 43
+  },
+  "dark /app/suppliers": {
+    "violations": [],
+    "passes": 47
+  },
+  "dark /app/reviews": {
+    "violations": [],
+    "passes": 44
+  },
+  "dark /app/events": {
+    "violations": [],
+    "passes": 47
+  },
+  "dark /app/events/1": {
+    "violations": [],
+    "passes": 44
+  },
+  "dark /app/alerts": {
+    "violations": [],
+    "passes": 50
+  },
+  "dark /app/explorer?company=1": {
+    "violations": [],
+    "passes": 47
+  },
+  "dark /app/sources": {
+    "violations": [],
+    "passes": 44
+  },
+  "dark /app/reports": {
+    "violations": [],
+    "passes": 40
+  },
+  "dark /app/analytics": {
+    "violations": [],
+    "passes": 49
+  },
+  "dark /app/settings": {
+    "violations": [],
+    "passes": 38
+  },
+  "light /app/platform/revenue": {
+    "violations": [],
+    "passes": 49
+  },
+  "light /app/billing": {
+    "violations": [],
+    "passes": 45
+  },
+  "light /app/admin": {
+    "violations": [],
+    "passes": 50
+  }
+}

@@ -24,27 +24,74 @@ function csrfToken(): string | undefined {
     ?.split("=")[1];
 }
 
+let refreshing: Promise<boolean> | null = null;
+
+/** Renew the session once for all concurrent callers. Returns false when the session is gone. */
+function refreshSession(): Promise<boolean> {
+  refreshing ??= fetch("/api/v1/auth/refresh", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "X-CSRF-Token": csrfToken() ?? "" },
+  })
+    .then((r) => r.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshing = null;
+    });
+  return refreshing;
+}
+
+const NO_REFRESH = ["/auth/login", "/auth/refresh", "/auth/mfa", "/auth/password"];
+
 export async function api<T>(
   path: string,
   init: RequestInit & { json?: unknown } = {},
 ): Promise<T> {
+  const res = await send(path, init);
+  if (
+    res.status === 401 &&
+    !NO_REFRESH.some((p) => path.startsWith(p)) &&
+    (await refreshSession())
+  ) {
+    return parse<T>(await send(path, init));
+  }
+  return parse<T>(res);
+}
+
+async function send(path: string, init: RequestInit & { json?: unknown }): Promise<Response> {
   const headers = new Headers(init.headers);
   const method = (init.method ?? (init.json !== undefined ? "POST" : "GET")).toUpperCase();
   if (init.json !== undefined) headers.set("Content-Type", "application/json");
   const csrf = csrfToken();
   if (csrf && method !== "GET") headers.set("X-CSRF-Token", csrf);
-  const res = await fetch(`/api/v1${path}`, {
+  return fetch(`/api/v1${path}`, {
     ...init,
     method,
     headers,
     credentials: "same-origin",
     body: init.json !== undefined ? JSON.stringify(init.json) : init.body,
   });
+}
+
+async function parse<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   const data = text ? (JSON.parse(text) as unknown) : {};
   if (!res.ok) throw new ApiRequestError(res.status, data as Problem);
   return data as T;
+}
+
+/** Download a file endpoint (CSV or PDF) through the same authenticated path. */
+export async function download(path: string, filename: string): Promise<void> {
+  const res = await send(path, {});
+  if (!res.ok)
+    throw new ApiRequestError(res.status, (await res.json().catch(() => ({}))) as Problem);
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /** Server-side fetch used at build and revalidation time. Returns null when the API is unreachable. */

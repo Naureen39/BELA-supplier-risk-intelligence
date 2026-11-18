@@ -10,6 +10,9 @@ const apiOrigin = process.env.API_ORIGIN ?? "http://127.0.0.1:8000";
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   poweredByHeader: false,
+  // Compression buffers server-sent events that are proxied from the API. The reverse proxy in front of
+  // the site (Caddy) compresses responses instead.
+  compress: false,
   images: { formats: ["image/avif", "image/webp"] },
   // The browser talks to one origin; the API is proxied under /api (plan section 10).
   async rewrites() {

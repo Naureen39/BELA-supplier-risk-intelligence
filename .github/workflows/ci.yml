@@ -86,6 +86,7 @@ jobs:
       - run: |
           PYTHONPATH=apps/api:. nohup uvicorn --factory app.main:create_app --port 8000 > api.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/v1/health/ready && break; sleep 1; done
+          python apps/web/e2e/seed_suppliers.py http://127.0.0.1:8000
         env:
           VALKEY_URL: redis://localhost:6379/0
           COOKIE_SECURE: "false"

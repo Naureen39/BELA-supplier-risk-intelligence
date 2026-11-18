@@ -29,9 +29,12 @@ async def create_alerts(c: Container, tenant_id: str, drafts: list[tuple[str, Al
                 if d.event_id is not None:
                     conn.execute("INSERT INTO alert_events (alert_id, change) VALUES (%s, 'created')",
                                  (row["id"],))
-                created.append(row)
+                created.append(row | {"supplier_name": conn.execute(
+                    "SELECT uploaded_name FROM suppliers WHERE id = %s", (row["supplier_id"],)
+                ).fetchone()["uploaded_name"]})
     for row in created:
         await c.broker.publish(alert_channel(tenant_id), {
             "id": str(row["id"]), "supplier_id": str(row["supplier_id"]), "kind": row["kind"],
-            "detail": row["detail"], "created_at": row["created_at"].isoformat()})
+            "detail": row["detail"], "supplier_name": row["supplier_name"],
+            "created_at": row["created_at"].isoformat()})
     return [str(r["id"]) for r in created]

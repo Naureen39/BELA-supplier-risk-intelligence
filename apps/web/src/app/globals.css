@@ -13,8 +13,9 @@
   --color-brand-500: #2f74d8;
   --color-brand-100: #e6effb;
   --color-teal: #00a3a3;
-  --color-success: #1e8e5a;
-  --color-warning: #c77700;
+  --color-link: #1f5fbf;
+  --color-success: #176e47;
+  --color-warning: #8a5200;
   --color-danger: #c0392b;
   --color-page: #f6f8fb;
   --color-line: #dde3ec;
@@ -160,4 +161,39 @@ body {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Application theme. The same utility classes serve both themes: the dark theme remaps the color
+   variables they read, so components need no per-theme variants. */
+.app-light {
+  background: var(--color-page);
+  color: var(--color-slate-800);
+}
+.app-dark {
+  --color-white: #152038;
+  --color-page: #0e1626;
+  --color-ink: #e8eef8;
+  --color-line: #243252;
+  --color-link: #8bbcff;
+  --color-slate-50: #1a2744;
+  --color-slate-100: #1f2d4b;
+  --color-slate-200: #2a3a5c;
+  --color-slate-300: #3d4f75;
+  --color-slate-400: #8393b3;
+  --color-slate-500: #a3b0c9;
+  --color-slate-600: #b3bfd5;
+  --color-slate-700: #c8d2e4;
+  --color-slate-800: #dde4f0;
+  --color-slate-900: #eef2f8;
+  --color-brand-100: #1b3358;
+  --color-brand-600: #2f74d8;
+  --color-success: #4cc38a;
+  --color-warning: #f0a93a;
+  --color-danger: #f08a7e;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 16px 48px rgb(0 0 0 / 0.55);
+  background: var(--color-page);
+  color: var(--color-slate-800);
+  color-scheme: dark;
 }

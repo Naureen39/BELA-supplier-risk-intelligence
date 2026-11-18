@@ -5,7 +5,7 @@ const badge = cva("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 tex
   variants: {
     tone: {
       neutral: "bg-slate-100 text-slate-700",
-      brand: "bg-brand-100 text-brand-600",
+      brand: "bg-brand-100 text-link",
       success: "bg-[#e3f4ec] text-[#176e47]",
       warning: "bg-[#fbeed6] text-[#8a5200]",
       danger: "bg-[#fbe4e1] text-[#9b2c20]",

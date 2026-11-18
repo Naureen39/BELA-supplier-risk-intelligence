@@ -62,7 +62,71 @@ def event_detail(event_id: int, p: Principal = Depends(viewer), conn: Any = deps
             "lc.splink_score, lc.llm_label FROM link_candidates lc JOIN companies co ON co.id = lc.company_id "
             "WHERE lc.event_entity_id = %s ORDER BY lc.rank", (e["id"],)).fetchall()
         out.append(jsonable(e) | {"candidates": [jsonable(x) for x in cands]})
-    return jsonable(ev) | {"entities": out, "disclaimer": DISCLAIMER}
+    return jsonable(ev) | {"entities": out, "evidence": _evidence(conn, ev, out),
+                           "reaches_suppliers": _reaches(conn, out), "disclaimer": DISCLAIMER}
+
+
+def _evidence(conn: Any, ev: dict[str, Any], entities: list[dict[str, Any]]) -> dict[str, Any]:
+    """The text or record fields behind an event. News shows the stored sentence with the company
+    names marked; regulator events show the structured fields of the source record."""
+    text = ev["summary"] or ev["title"] or ""
+    names: dict[str, int] = {}
+    for e in entities:
+        if e["company_id"] is None:
+            continue
+        names[e["canonical_name"]] = e["company_id"]
+        for a in conn.execute("SELECT alias FROM company_aliases WHERE company_id = %s", (e["company_id"],)):
+            names.setdefault(a["alias"], e["company_id"])
+    spans: list[dict[str, Any]] = []
+    lowered = text.lower()
+    for name, cid in sorted(names.items(), key=lambda kv: -len(kv[0])):
+        start = lowered.find(name.lower()) if name else -1
+        if start >= 0 and not any(start < s["end"] and start + len(name) > s["start"] for s in spans):
+            spans.append({"start": start, "end": start + len(name), "company_id": cid})
+    kind = "news" if ev["source"] == "news" else "record"
+    return {"kind": kind, "text": text, "spans": sorted(spans, key=lambda s: s["start"]),
+            "fields": ev["raw_ref"] if kind == "record" else {}}
+
+
+def _reaches(conn: Any, entities: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Portfolio suppliers an event reaches: directly, through a parent, or through a subsidiary."""
+    from app.services.portfolio import parent_map
+
+    linked = {int(e["company_id"]): e["canonical_name"] for e in entities if e["company_id"] is not None}
+    if not linked:
+        return []
+    sups = conn.execute("SELECT id, uploaded_name, resolved_company_id AS cid FROM suppliers "
+                        "WHERE resolved_company_id IS NOT NULL AND duplicate_of IS NULL").fetchall()
+    ids = sorted({int(s["cid"]) for s in sups} | set(linked))
+    parents = parent_map(conn, ids)
+    names = {r["id"]: r["canonical_name"] for r in conn.execute(
+        "SELECT id, canonical_name FROM companies WHERE id = ANY(%s)", (ids,)).fetchall()}
+
+    def chain(start: int) -> list[int]:
+        out, cur = [start], start
+        while cur in parents and parents[cur] not in out:
+            cur = parents[cur]
+            out.append(cur)
+        return out
+
+    reached = []
+    for s in sups:
+        cid = int(s["cid"])
+        up = chain(cid)  # supplier, its parent, and so on
+        for ev_cid in linked:
+            if ev_cid in up:  # the event company is the supplier or one of its parents
+                path = [names.get(c, str(c)) for c in up[: up.index(ev_cid) + 1]]
+                rel = "direct" if cid == ev_cid else "parent"
+            elif cid in chain(ev_cid):  # the supplier is a parent of the event company
+                down = chain(ev_cid)
+                path = [names.get(c, str(c)) for c in down[: down.index(cid) + 1]]
+                rel = "subsidiary"
+            else:
+                continue
+            reached.append({"supplier_id": str(s["id"]), "supplier_name": s["uploaded_name"],
+                            "relation": rel, "path": path})
+            break
+    return reached
 
 
 @router.get("/companies/search", summary="Search canonical companies")

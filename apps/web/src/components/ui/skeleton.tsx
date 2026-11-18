@@ -1,7 +1,19 @@
 import { cn } from "@/lib/cn";
 
-export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cn("animate-pulse rounded-[8px] bg-slate-200", className)} />;
+export function Skeleton({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      aria-hidden
+      style={style}
+      className={cn("animate-pulse rounded-[8px] bg-slate-200", className)}
+    />
+  );
 }
 
 export function EmptyState({ title, children }: { title: string; children?: React.ReactNode }) {

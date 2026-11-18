@@ -412,7 +412,7 @@ def test_end_to_end_upload_review_subsidiary_event_sse_and_report(world: World, 
 
     chunks = asyncio.run(scenario())
     msg = json.loads(chunks[-1].split("data: ", 1)[1])
-    assert msg["supplier_id"] == parent_sup["id"] and msg["kind"] in ("high_severity_event", "threshold_crossing")
+    assert msg["supplier_name"] and msg["supplier_id"] == parent_sup["id"] and msg["kind"] in ("high_severity_event", "threshold_crossing")
     assert alert_channel(world.tenant_a).startswith("alerts:")
     assert any(a["id"] == msg["id"] for a in mgr.get("/alerts").json()["items"])
     risk = mgr.get(f"/suppliers/{parent_sup['id']}/risk").json()

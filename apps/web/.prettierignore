@@ -2,3 +2,5 @@
 node_modules
 reports
 public/images/**/*.json
+test-results
+playwright-report
