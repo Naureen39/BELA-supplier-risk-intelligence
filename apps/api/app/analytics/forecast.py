@@ -58,7 +58,7 @@ def _fit_best(y: pd.Series) -> Fit:
                 res = ETSModel(y, error=err, trend=trend, damped_trend=damped).fit(disp=False)
             if not np.isfinite(res.aicc):
                 continue
-        except Exception:
+        except Exception:  # nosec B112
             continue
         if best is None or res.aicc < best.aicc:
             best = Fit(spec, float(res.aicc), res)

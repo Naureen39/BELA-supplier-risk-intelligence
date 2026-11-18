@@ -3,7 +3,7 @@ export PYTHONPATH := .
 # WeasyPrint finds Pango here on macOS with Homebrew; harmless elsewhere.
 export DYLD_FALLBACK_LIBRARY_PATH ?= /opt/homebrew/lib
 
-.PHONY: web-install web-dev web-build web-check web-e2e web-quality demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: publish-metrics web-install web-dev web-build web-check web-e2e web-quality demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -65,6 +65,9 @@ fit:
 train:
 	$(PY) -m training.train
 	$(MAKE) fit
+
+publish-metrics:
+	$(PY) infra/publish_metrics.py
 
 eval:
 	cd apps/api && PYTHONPATH=.:../.. ../../.venv/bin/python -m app.resolution.evaluation.run --out ../../docs/eval

@@ -31,7 +31,7 @@ _SIC = {"Foods": "2000", "Metals": "3310", "Logistics": "4210", "Auto Parts": "3
 def generate_catalog(n: int, seed: int = 42, subsidiary_share: float = 0.15,
                      twin_share: float = 0.05) -> Catalog:
     """`n` fictional companies, with same-name twins in other states and subsidiaries."""
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311
     records: list[CompanyRecord] = []
     edges: list[tuple[int, int]] = []
     used: set[str] = set()

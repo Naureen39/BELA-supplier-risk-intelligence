@@ -296,6 +296,16 @@ export default function SupplierDetail({ params }: { params: Promise<{ id: strin
           ))}
         </ul>
       )}
+      {s.resolution_detail.degraded === true && (
+        <p
+          role="status"
+          className="border-warning text-ink mb-4 rounded-[10px] border bg-white p-3 text-sm"
+        >
+          <Badge tone="warning">Reduced confidence</Badge> A model service was unavailable when this
+          supplier was resolved, so the match used retrieval and Splink scoring only. Check the
+          match before relying on it.
+        </p>
+      )}
       {p.company && (
         <p className="mt-3 text-sm">
           <Link

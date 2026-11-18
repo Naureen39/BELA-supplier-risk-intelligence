@@ -88,3 +88,62 @@ def review_decide(entity_id: int, body: ReviewDecision, p: Principal = Depends(p
     audit_event(c, p, "platform.review_decided", "event_entity", str(entity_id),
                 {"decision": body.decision, "company_id": body.company_id})
     return {"id": entity_id, "decision": body.decision}
+
+
+# ------------------------------------------------------------------ dead letter queue
+@router.get("/dead-letters", summary="Work that failed after its retries")
+def dead_letters(status: Literal["open", "retried", "discarded"] = "open", limit: int = 100,
+                 p: Principal = Depends(platform_admin), c: Container = Depends(deps.get_container)
+                 ) -> dict[str, Any]:
+    with c.db.system() as conn:
+        rows = conn.execute(
+            "SELECT id, kind, tenant_id, reference, error, attempts, status, created_at, resolved_at "
+            "FROM dead_letters WHERE status = %s ORDER BY created_at DESC LIMIT %s",
+            (status, min(max(limit, 1), 500))).fetchall()
+    return {"items": [jsonable(r) for r in rows]}
+
+
+class DeadLetterAction(BaseModel):
+    action: Literal["retry", "discard"]
+
+
+@router.post("/dead-letters/{item_id}", summary="Retry or discard a failed item")
+def dead_letter_act(item_id: int, body: DeadLetterAction, background: BackgroundTasks,
+                    p: Principal = Depends(platform_admin), c: Container = Depends(deps.get_container)
+                    ) -> dict[str, Any]:
+    from app.services.notify import Notifier
+    from app.services.resolution import process_upload
+
+    with c.db.system() as conn:
+        row = conn.execute("SELECT * FROM dead_letters WHERE id = %s AND status = 'open' FOR UPDATE",
+                           (item_id,)).fetchone()
+        if not row:
+            raise ApiError(404, "The item was not found or is already resolved.", code="not-found")
+        if body.action == "discard":
+            conn.execute("UPDATE dead_letters SET status = 'discarded', resolved_at = now() WHERE id = %s",
+                         (item_id,))
+            audit_event(c, p, "dead_letter.discarded", "dead_letter", str(item_id), {"kind": row["kind"]})
+            return {"id": item_id, "status": "discarded"}
+    kind, payload = row["kind"], row["payload"]
+    try:
+        if kind == "upload":
+            process_upload(c, str(row["tenant_id"]), payload["upload_id"])
+        elif kind == "webhook":
+            Notifier(c).redeliver_webhook(payload["url"], payload["body"])
+        elif kind == "email":
+            for to in payload["to"]:
+                c.mailer.send(to, payload["subject"], payload["body"])
+        else:
+            raise ApiError(422, f"Items of kind {kind} are retried by re-running the ingest job.",
+                           code="not-retryable")
+    except ApiError:
+        raise
+    except Exception as exc:
+        with c.db.system() as conn:
+            conn.execute("UPDATE dead_letters SET attempts = attempts + 1, error = %s WHERE id = %s",
+                         (type(exc).__name__, item_id))
+        raise ApiError(502, f"The retry failed: {type(exc).__name__}.", code="retry-failed") from exc
+    with c.db.system() as conn:
+        conn.execute("UPDATE dead_letters SET status = 'retried', resolved_at = now() WHERE id = %s", (item_id,))
+    audit_event(c, p, "dead_letter.retried", "dead_letter", str(item_id), {"kind": kind})
+    return {"id": item_id, "status": "retried"}

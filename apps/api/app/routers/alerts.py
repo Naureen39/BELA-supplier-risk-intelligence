@@ -39,16 +39,17 @@ def alerts(cursor: str | None = None, limit: int = 50, status: str | None = None
            p: Principal = Depends(viewer), conn: Any = deps.TENANT_DB,
            c: Container = Depends(deps.get_container)) -> dict[str, Any]:
     pos, lim = keyset(c, cursor, limit)
+    t = p.tenant_id  # None for a platform administrator without a tenant header
     sid = parse_uuid(supplier_id, "supplier") if supplier_id else None
     aid = parse_uuid(assignee, "assignee") if assignee else None
     rows = conn.execute(
         "SELECT a.id, a.supplier_id, s.uploaded_name AS supplier_name, a.kind, a.status, a.assignee_id, "
         "a.detail, a.rule_id, a.created_at, a.updated_at FROM alerts a JOIN suppliers s ON s.id = a.supplier_id "
-        "WHERE (%s::text IS NULL OR a.status = %s) AND (%s::uuid IS NULL OR a.assignee_id = %s::uuid) "
+        "WHERE (a.tenant_id = %s OR %s::uuid IS NULL) AND (%s::text IS NULL OR a.status = %s) AND (%s::uuid IS NULL OR a.assignee_id = %s::uuid) "
         "AND (%s::uuid IS NULL OR a.supplier_id = %s::uuid) "
         "AND (%s::text IS NULL OR (a.created_at, a.id) < (%s::timestamptz, %s::uuid)) "
         "ORDER BY a.created_at DESC, a.id DESC LIMIT %s",
-        (status, status, aid, aid, sid, sid, pos and pos[0], pos and pos[0], pos and pos[1],
+        (t, t, status, status, aid, aid, sid, sid, pos and pos[0], pos and pos[0], pos and pos[1],
          lim + 1)).fetchall()
     return page(c, rows, lim, ("created_at", "id"))
 
@@ -176,7 +177,7 @@ def rule_patch(rule_id: str, body: RulePatch, p: Principal = Depends(manager),
     if "states" in changes:
         changes["states"] = [s.upper() for s in changes["states"]]
     sets = ", ".join(f"{k} = %s" for k in changes)
-    row = conn.execute(f"UPDATE alert_rules SET {sets} WHERE id = %s RETURNING *",
+    row = conn.execute(f"UPDATE alert_rules SET {sets} WHERE id = %s RETURNING *",  # nosec B608
                        (*changes.values(), rid)).fetchone()
     if not row:
         raise ApiError(404, "The rule was not found.", code="not-found")

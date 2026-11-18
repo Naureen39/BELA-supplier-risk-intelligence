@@ -102,7 +102,7 @@ COVERAGE_NOTE = ("Structured regulator and filing data is mostly US sources (SEC
 
 @router.get("/sources", summary="Data source freshness, counts, and license notes")
 def sources(p: Principal = Depends(manager), conn: Any = deps.TENANT_DB) -> dict[str, Any]:
-    counts = {t: conn.execute(f"SELECT count(*) AS n FROM {t}").fetchone()["n"]
+    counts = {t: conn.execute(f"SELECT count(*) AS n FROM {t}").fetchone()["n"]  # nosec B608
               for t in ("companies", "company_aliases", "company_relationships", "facilities", "articles")}
     ev = conn.execute("SELECT source, count(*) AS records, max(reported_at) AS latest "
                       "FROM events GROUP BY source ORDER BY source").fetchall()

@@ -46,7 +46,7 @@ def main() -> int:
     from huggingface_hub import hf_hub_download
 
     DEST.mkdir(exist_ok=True)
-    path = Path(hf_hub_download(repo_id=repo, filename=filename, local_dir=DEST))
+    path = Path(hf_hub_download(repo_id=repo, filename=filename, local_dir=DEST))  # nosec B615
     actual = sha256_of(path)
     if args.record:
         LOCK.write_text(json.dumps({"repo": repo, "file": filename, "sha256": actual,

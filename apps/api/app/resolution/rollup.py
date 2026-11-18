@@ -99,6 +99,17 @@ class CorporateGraph:
                     )
         return sorted(found.values(), key=lambda p: (p.depth, p.supplier_id))
 
+    def event_sources(self, supplier_id: int, max_depth: int = 2) -> set[int]:
+        """Every company whose events can reach `supplier_id` through `reach`: the supplier itself, its
+        descendants (a subsidiary event reaches the parent), its ancestors, and its siblings. Used to look up
+        only the relevant events instead of testing every event against every supplier."""
+        out = {supplier_id}
+        out.update(self.descendants(supplier_id, max_depth))
+        out.update(self.ancestors(supplier_id, max_depth))
+        for parent in self.parents.get(supplier_id, ()):
+            out.update(self.children.get(parent, ()))
+        return out
+
     def ultimate_parent(self, company_id: int, max_steps: int = 20) -> int:
         """Follow the lowest-id parent upward until a root (cycle-safe)."""
         seen = {company_id}

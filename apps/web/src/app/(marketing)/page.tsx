@@ -59,8 +59,9 @@ export default async function HomePage() {
   const stats = await getStats();
   const linked =
     stats?.sources.filter((s) => s.source !== "news").reduce((n, s) => n + s.linked, 0) ?? 0;
-  const hybrid = stats?.evaluation?.systems.find((s) => s.system.toLowerCase().includes("hybrid"));
-  const fuzzy = stats?.evaluation?.systems.find(
+  const systems = stats?.evaluation?.systems ?? [];
+  const hybrid = systems.find((s) => s.system.toLowerCase().includes("hybrid"));
+  const fuzzy = systems.find(
     (s) => s.system.toLowerCase().includes("fuzzy") || s.system.toLowerCase().includes("rapidfuzz"),
   );
   const reduction =
@@ -70,8 +71,13 @@ export default async function HomePage() {
       ? Math.round((1 - hybrid.false_links_per_1000 / fuzzy.false_links_per_1000) * 100)
       : null;
   const evalLabel = stats?.evaluation?.data ?? null;
+  const synthetic = (evalLabel ?? "").toLowerCase().includes("synthetic");
+  // Precision alone flatters a cautious matcher, so each evaluation figure carries the share of records the
+  // system matched automatically, and says when the data is synthetic.
+  const autoShare = hybrid?.recall != null ? `${(hybrid.recall * 100).toFixed(0)}%` : null;
+  const caveat = `${synthetic ? "Synthetic evaluation data. " : ""}${autoShare ? `${autoShare} of records matched automatically; the rest go to review.` : ""}`;
 
-  const proof: { value: string; label: string }[] = [];
+  const proof: { value: string; label: string; note?: string }[] = [];
   if (stats && stats.companies > 0)
     proof.push({ value: fmt(stats.companies), label: "canonical companies indexed" });
   if (linked > 0)
@@ -80,9 +86,14 @@ export default async function HomePage() {
     proof.push({
       value: `${(hybrid.precision * 100).toFixed(1)}%`,
       label: "precision of automatic matches",
+      note: caveat,
     });
   if (reduction != null)
-    proof.push({ value: `${reduction}%`, label: "fewer false links than fuzzy matching" });
+    proof.push({
+      value: `${reduction}%`,
+      label: "fewer false links than fuzzy matching",
+      note: caveat,
+    });
 
   const steps = [
     {
@@ -176,6 +187,7 @@ export default async function HomePage() {
             <div key={p.label}>
               <p className="text-ink text-4xl font-semibold tracking-tight">{p.value}</p>
               <p className="mt-1 text-[15px] text-slate-700">{p.label}</p>
+              {p.note && <p className="mt-1 text-xs leading-5 text-slate-600">{p.note}</p>}
             </div>
           ))}
           {proof.length < 4 && (

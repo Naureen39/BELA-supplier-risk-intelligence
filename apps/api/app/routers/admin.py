@@ -53,7 +53,7 @@ def tenant_patch(body: TenantPatch, p: Principal = Depends(admin_user),
     changes = body.model_dump(exclude_none=True)
     if changes:
         sets = ", ".join(f"{k} = %s" for k in changes)
-        conn.execute(f"UPDATE tenants SET {sets} WHERE id = %s", (*changes.values(), t))
+        conn.execute(f"UPDATE tenants SET {sets} WHERE id = %s", (*changes.values(), t))  # nosec B608
         audit_event(c, p, "tenant.settings_changed", "tenant", t, changes)
     return tenant_current(p, t, conn)
 
@@ -121,7 +121,7 @@ def admin_user_patch(user_id: str, body: UserPatch, p: Principal = Depends(admin
             vals.append(val)
     if not sets:
         raise ApiError(422, "Nothing to change.", code="validation")
-    row = conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = %s AND role <> 'platform_admin' "
+    row = conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = %s AND role <> 'platform_admin' "  # nosec B608
                        "RETURNING id, email, role, is_active", (*vals, uid)).fetchone()
     if not row:
         raise ApiError(404, "The user was not found.", code="not-found")

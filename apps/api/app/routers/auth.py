@@ -23,7 +23,7 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
     model_config = {"json_schema_extra": {"examples": [
-        {"email": "analyst@example.org", "password": "correct horse battery staple"}]}}
+        {"email": "analyst@example.org", "password": "correct horse battery staple"}]}}  # nosec B105
 
 
 class MfaVerifyIn(BaseModel):
@@ -103,7 +103,8 @@ async def mfa_verify(body: MfaVerifyIn, request: Request, response: Response,
         await _limit(c, f"mfa:{claims.user_id}", (5, 300))
         tokens = await run_in_threadpool(c.auth.verify_mfa, claims.user_id, body.code,
                                          body.recovery_code, ua, True)
-        assert tokens is not None
+        if tokens is None:  # an explicit check: asserts are removed under python -O
+            raise ApiError(500, "The session could not be issued.", code="internal")
         return _session_response(c, response, tokens)
     principal = await run_in_threadpool(deps.get_principal, request, c)
     if principal.kind != "session" or not principal.user_id:
@@ -132,7 +133,8 @@ async def refresh(request: Request, response: Response,
 @router.post("/logout", status_code=204, summary="End the current session")
 async def logout(response: Response, principal: Principal = Depends(deps.session_only),
                  c: Container = Depends(deps.get_container)) -> Response:
-    assert principal.family_id and principal.user_id
+    if not (principal.family_id and principal.user_id):
+        raise ApiError(403, "This endpoint requires an interactive session.", code="forbidden")
     await run_in_threadpool(c.auth.logout, principal.family_id, principal.user_id,
                             principal.tenant_id)
     out = Response(status_code=204)

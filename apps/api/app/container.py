@@ -35,7 +35,7 @@ class Container:
     @classmethod
     def build(cls, settings: Settings, db: Database | None = None, mailer: Mailer | None = None,
               limiter: RateLimiter | None = None, broker: Broker | None = None) -> Container:
-        db = db or Database(settings.database_url)
+        db = db or Database(settings.database_url, settings.db_pool_min, settings.db_pool_max)
         passwords = PasswordService(settings)
         tokens = TokenService(settings)
         cipher = DataCipher(settings)

@@ -61,7 +61,7 @@ def synthetic_test(
         records.append(QueryRecord(rid, row["mention"], state=row["state"], city=row["city"]))
         truth[rid] = row["label_id"]
         tags[rid] = frozenset({"hard"}) if len(row["ops"]) > 1 else frozenset()
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311
     syll = ["zor", "quil", "vex", "mar", "tun", "bel", "kra", "dun", "fyl", "sor"]
     for j in range(max(1, int(len(rows) * nil_share))):
         rid = f"syn-nil-{j}"

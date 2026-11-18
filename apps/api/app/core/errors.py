@@ -7,6 +7,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from psycopg import OperationalError
+from psycopg_pool import PoolTimeout
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 PROBLEM = "application/problem+json"
@@ -50,6 +52,17 @@ def install_handlers(app: FastAPI) -> None:
                    "type": e["type"]} for e in exc.errors()]
         return problem(request, 422, "The request did not pass validation.", code="validation",
                        extra={"errors": errors})
+
+    @app.exception_handler(OperationalError)
+    @app.exception_handler(PoolTimeout)
+    async def _db_unavailable(request: Request, exc: Exception) -> JSONResponse:
+        # The database is down, restarting, or saturated: tell clients to retry instead of reporting a bug.
+        import structlog
+
+        structlog.get_logger().error("database_unavailable", error_type=type(exc).__name__,
+                                     request_id=getattr(request.state, "request_id", None))
+        return problem(request, 503, "The service is temporarily unavailable. Try again shortly.",
+                       code="unavailable", headers={"Retry-After": "5"})
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:

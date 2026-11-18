@@ -60,13 +60,13 @@ def _stats_at(conn: Any, win: Window) -> dict[str, Any] | None:
 
 
 def _event_count(conn: Any, win: Window, source: str | None) -> int:
-    return int(conn.execute(f"SELECT count(DISTINCT id) AS n FROM ({EVENTS}) q",
+    return int(conn.execute(f"SELECT count(DISTINCT id) AS n FROM ({EVENTS}) q",  # nosec B608
                             _p(win, source=source)).fetchone()["n"])
 
 
 def _live_levels(conn: Any) -> dict[str, int]:
     rows = conn.execute(
-        f"SELECT l.level, count(*) AS n FROM suppliers s JOIN ({LATEST}) l ON l.supplier_id = s.id "
+        f"SELECT l.level, count(*) AS n FROM suppliers s JOIN ({LATEST}) l ON l.supplier_id = s.id "  # nosec B608
         "WHERE s.duplicate_of IS NULL GROUP BY l.level").fetchall()
     return {r["level"]: int(r["n"]) for r in rows}
 
@@ -122,30 +122,30 @@ def portfolio(conn: Any, win: Window, g: str, compare: bool, source: str | None)
 
     p = _p(win, g, source)
     by_type = conn.execute(
-        f"SELECT date_trunc(%(g)s, reported_at)::date AS period, event_type, count(DISTINCT id) AS events "
+        f"SELECT date_trunc(%(g)s, reported_at)::date AS period, event_type, count(DISTINCT id) AS events "  # nosec B608
         f"FROM ({EVENTS}) q GROUP BY 1, 2 ORDER BY 1, 2", p).fetchall()
     mix = conn.execute(
-        f"SELECT CASE WHEN source = 'news' THEN 'news' ELSE 'regulator' END AS source_class, "
+        f"SELECT CASE WHEN source = 'news' THEN 'news' ELSE 'regulator' END AS source_class, "  # nosec B608
         f"count(DISTINCT id) AS events FROM ({EVENTS}) q GROUP BY 1 ORDER BY 2 DESC", p).fetchall()
     by_state = conn.execute(
-        f"SELECT state, count(DISTINCT id) AS events, sum(severity) AS weighted_events FROM "
+        f"SELECT state, count(DISTINCT id) AS events, sum(severity) AS weighted_events FROM "  # nosec B608
         f"(SELECT DISTINCT id, state, severity FROM ({EVENTS}) q0) q WHERE state IS NOT NULL "
         f"GROUP BY state ORDER BY weighted_events DESC, state", p).fetchall()
     facility_events = conn.execute(
-        f"SELECT DISTINCT ON (id) id, title, event_type, severity, state, latitude, longitude, reported_at "
+        f"SELECT DISTINCT ON (id) id, title, event_type, severity, state, latitude, longitude, reported_at "  # nosec B608
         f"FROM ({EVENTS}) q WHERE latitude IS NOT NULL AND longitude IS NOT NULL ORDER BY id, reported_at DESC",
         p).fetchall()
     facility_events = sorted((dict(r) for r in facility_events), key=lambda r: r["reported_at"], reverse=True)[:200]
 
     heat = conn.execute(
-        f"SELECT coalesce(q.tier, 'untiered') AS tier, q.event_type, count(DISTINCT q.id) AS events, "
+        f"SELECT coalesce(q.tier, 'untiered') AS tier, q.event_type, count(DISTINCT q.id) AS events, "  # nosec B608
         f"max({LEVEL_RANK.format(c='l.level')}) AS max_rank FROM ({EVENTS}) q "
         f"LEFT JOIN ({LATEST}) l ON l.supplier_id = q.supplier_id GROUP BY 1, 2 ORDER BY 1, 2", p).fetchall()
     heatmap = [{"tier": r["tier"], "event_type": r["event_type"], "events": r["events"],
                 "max_level": RANK_LEVEL.get(r["max_rank"])} for r in heat]
 
     top = conn.execute(
-        f"SELECT s.id AS supplier_id, s.uploaded_name AS name, s.tier, l.score, l.level, "
+        f"SELECT s.id AS supplier_id, s.uploaded_name AS name, s.tier, l.score, l.level, "  # nosec B608
         f"(SELECT jsonb_build_object('title', e.title, 'reported_at', e.reported_at, 'event_type', e.event_type) "
         f"   FROM events e JOIN event_entities ee ON ee.event_id = e.id AND ee.route = 'accepted' "
         f"   WHERE ee.company_id = s.resolved_company_id ORDER BY e.reported_at DESC LIMIT 1) AS last_event, "
@@ -183,7 +183,7 @@ def portfolio(conn: Any, win: Window, g: str, compare: bool, source: str | None)
         total = s["auto_resolved"] + s["reviewed"] + s["unresolved"]
         return 100 * s["auto_resolved"] / total if total else None
 
-    live_risk = conn.execute(f"SELECT avg(score) AS a FROM ({LATEST}) l").fetchone()["a"]
+    live_risk = conn.execute(f"SELECT avg(score) AS a FROM ({LATEST}) l").fetchone()["a"]  # nosec B608
     decided = _decided(conn, win)
     prev_decided = _decided(conn, prev) if prev else None
     live_status = {r["status"]: int(r["n"]) for r in by_status}

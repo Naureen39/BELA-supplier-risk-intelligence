@@ -94,7 +94,7 @@ SELECT month_start, mrr, mrr * 12 AS arr, customers, new_logos, churned_logos,
        (mrr / nullif(customers, 0)) * %(margin)s
             / nullif(churned_3m::numeric / nullif(start_3m, 0), 0) AS ltv
 FROM rolled ORDER BY month_start
-"""
+"""  # nosec B608
 
 KPI_DEFS: tuple[tuple[str, str, str, str], ...] = (
     # key, label, unit, direction of improvement
@@ -232,7 +232,7 @@ def breakdown(conn: Any, dimension: str, month: date, f: Filters, live: bool = F
         col = {"plan": "m.plan_code", "region": "t.region", "industry": "t.industry",
                "channel": "t.acquisition_channel"}[dimension]  # fixed identifiers, never user input
         rows = conn.execute(
-            f"SELECT coalesce({col}, 'unknown') AS value, sum(m.mrr) AS mrr, "
+            f"SELECT coalesce({col}, 'unknown') AS value, sum(m.mrr) AS mrr, "  # nosec B608
             "count(DISTINCT m.tenant_id) AS customers FROM mrr_movements m JOIN tenants t ON t.id = m.tenant_id "
             "WHERE m.month_start = %(month)s AND m.mrr > 0 "
             "AND (%(plan)s::text IS NULL OR m.plan_code = %(plan)s) "
@@ -379,7 +379,7 @@ def refresh_views(conn: Any) -> dict[str, int]:
     counts: dict[str, int] = {}
     for view in VIEWS:
         conn.execute(f"REFRESH MATERIALIZED VIEW {view}")
-        n = int(conn.execute(f"SELECT count(*) AS n FROM {view}").fetchone()["n"])
+        n = int(conn.execute(f"SELECT count(*) AS n FROM {view}").fetchone()["n"])  # nosec B608
         conn.execute(
             "INSERT INTO metric_refresh_log (view_name, refreshed_at, row_count) VALUES (%s, now(), %s) "
             "ON CONFLICT (view_name) DO UPDATE SET refreshed_at = now(), row_count = EXCLUDED.row_count",

@@ -11,7 +11,7 @@ import argparse
 import json
 import shlex
 import string
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import Any
@@ -61,7 +61,7 @@ def main() -> int:
         print(f"[{name}] {shlex.join(cmd)}")
         if args.dry_run:
             continue
-        subprocess.run(cmd, check=True, cwd=ROOT)  # noqa: S603
+        subprocess.run(cmd, check=True, cwd=ROOT)  # noqa: S603  # nosec B603
     meta = {"config": cfg, "stages": [n for n, _ in commands]}
     if not args.dry_run:
         Path(cfg["output_dir"]).mkdir(parents=True, exist_ok=True)

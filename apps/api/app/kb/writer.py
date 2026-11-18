@@ -22,7 +22,7 @@ def connect(url: str) -> psycopg.Connection:
 def assert_safe_to_rebuild(conn: psycopg.Connection) -> None:
     """The knowledge base is rebuilt from sources; refuse if downstream data depends on it."""
     for table in _DEPENDENT_TABLES:
-        row = conn.execute(f"SELECT EXISTS (SELECT 1 FROM {table})").fetchone()
+        row = conn.execute(f"SELECT EXISTS (SELECT 1 FROM {table})").fetchone()  # nosec B608
         if row and row[0]:
             raise RuntimeError(f"{table} holds rows that reference companies; rebuild refused")
 

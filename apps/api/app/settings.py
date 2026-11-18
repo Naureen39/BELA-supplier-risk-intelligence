@@ -6,6 +6,20 @@ import os
 from dataclasses import dataclass, field
 
 
+def _limit(name: str, default: tuple[int, int]) -> tuple[int, int]:
+    """A rate limit from `NAME=requests/seconds`, for example `RATE_LIMIT_IP=600/60`."""
+    raw = os.environ.get(name)
+    if not raw:
+        return default
+    try:
+        n, window = raw.split("/")
+        if int(n) < 1 or int(window) < 1:
+            raise ValueError
+        return int(n), int(window)
+    except ValueError as exc:
+        raise SystemExit(f"{name} must look like 600/60 (requests per seconds), got {raw!r}") from exc
+
+
 def _bool(name: str, default: bool) -> bool:
     return os.environ.get(name, str(default)).lower() in {"1", "true", "yes", "on"}
 
@@ -40,6 +54,8 @@ class Settings:
     login_account_limit: tuple[int, int] = (10, 900)
     user_limit: tuple[int, int] = (300, 60)
     key_limit: tuple[int, int] = (600, 60)
+    db_pool_min: int = 2
+    db_pool_max: int = 10
     # Size limits (bytes) and upload row limit
     max_body_bytes: int = 1_000_000
     max_upload_bytes: int = 10_000_000
@@ -74,4 +90,11 @@ class Settings:
             report_dir=os.environ.get("REPORT_DIR", "var/reports"),
             demo_mode=_bool("DEMO_MODE", True),
             eval_metrics_path=os.environ.get("EVAL_METRICS_PATH", "docs/eval/metrics.json"),
+            ip_limit=_limit("RATE_LIMIT_IP", (600, 60)),
+            login_ip_limit=_limit("RATE_LIMIT_LOGIN_IP", (20, 60)),
+            login_account_limit=_limit("RATE_LIMIT_LOGIN_ACCOUNT", (10, 900)),
+            user_limit=_limit("RATE_LIMIT_USER", (300, 60)),
+            key_limit=_limit("RATE_LIMIT_KEY", (600, 60)),
+            db_pool_min=int(os.environ.get("DB_POOL_MIN", "2")),
+            db_pool_max=int(os.environ.get("DB_POOL_MAX", "10")),
         )

@@ -47,7 +47,7 @@ def family_tree(conn: Any, company_id: int, depth: int = 2) -> dict[str, Any]:
                 return
             col, other = ("child_id", "parent_id") if direction == "up" else ("parent_id", "child_id")
             rows = conn.execute(
-                f"SELECT parent_id, child_id, rel_type, ownership_share, source, as_of "
+                f"SELECT parent_id, child_id, rel_type, ownership_share, source, as_of "  # nosec B608
                 f"FROM company_relationships WHERE {col} = ANY(%s)", (frontier,)).fetchall()
             nxt = []
             for r in rows:

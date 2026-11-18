@@ -229,14 +229,15 @@ def test_query_plans_use_indexes(db_url):
         }
         expect = {
             "trigram_company": "companies_norm_trgm",
-            "exact_name_state": "companies_norm_state",
+            "exact_name_state": ("companies_norm_state", "companies_norm_prefix"),  # either serves an equality lookup
             "cik": "companies_cik_key",
             "family_children": "company_relationships_parent_id_child_id_rel_type_source_key",
             "hnsw": "entity_embeddings_hnsw",
         }
         for name, sql in plans.items():
             plan = "\n".join(r[0] for r in conn.execute(sql))
-            assert expect[name] in plan, f"{name}: {plan}"
+            wanted = expect[name] if isinstance(expect[name], tuple) else (expect[name],)
+            assert any(w in plan for w in wanted), f"{name}: {plan}"
 
 
 def test_pipeline_cli_end_to_end(db_url, tmp_path, monkeypatch, capsys):

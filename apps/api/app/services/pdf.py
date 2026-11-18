@@ -59,5 +59,6 @@ def render_pdf(html_text: str) -> bytes:
     from weasyprint import HTML
 
     data = HTML(string=html_text, url_fetcher=_deny).write_pdf()
-    assert isinstance(data, bytes)
+    if not isinstance(data, bytes):
+        raise RuntimeError("The PDF renderer returned no data")
     return data

@@ -67,3 +67,14 @@ Not done:
   a scheduled task will call.
 - The tenant `retention_days` setting is stored, but no purge job exists yet.
 - API endpoints for corrections, merge-duplicates, and newsletter signup belong to Phase 6 and 8.
+
+## Phase 10 additions
+
+- `GET /platform/dead-letters` and `POST /platform/dead-letters/{id}` (platform administrator): failed uploads, webhooks, and
+  email that exhausted their retries, with retry and discard. See `docs/runbook.md`.
+- A database outage or an exhausted connection pool answers `503` with `Retry-After: 5` and no internal detail.
+- Rate limits and the connection pool are set per environment: `RATE_LIMIT_IP`, `RATE_LIMIT_USER`, `RATE_LIMIT_KEY`,
+  `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT` (`requests/seconds`), `DB_POOL_MIN`, `DB_POOL_MAX`.
+- `GET /events/{id}` returns `evidence` and `reaches_suppliers` (Phase 9). Live alerts carry `supplier_name`.
+- The supplier and alert lists add the tenant condition explicitly next to row level security (the explicit condition lets the
+  planner use the index; the security guarantee is unchanged and still enforced by the database).

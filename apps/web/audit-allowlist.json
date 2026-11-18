@@ -1,0 +1,11 @@
+{
+  "reviewed": "2026-11-18",
+  "entries": [
+    {
+      "advisory": "GHSA-fc5q-39xc-vjpf",
+      "package": "picomatch",
+      "reason": "Denial of service through crafted glob patterns. No patched release exists (4.0.7 is the latest and is affected). It is reached only through development tooling (eslint, vitest) and the file watcher inside next-intl, which run with patterns the developers write, never with user input, and none of it runs in the production server.",
+      "expires": "2026-12-31"
+    }
+  ]
+}

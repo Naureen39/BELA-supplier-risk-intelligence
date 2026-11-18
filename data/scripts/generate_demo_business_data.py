@@ -262,7 +262,7 @@ def _source_lift(d: date) -> float:
 
 def generate(out_dir: Path = OUT_DIR, seed: int = SEED, first: date = START, last: date = END
              ) -> dict[str, int]:
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # nosec B311
     tenants = build_tenants(rng, first, last)
     counts: dict[str, int] = {}
 

@@ -54,8 +54,14 @@ class PipelineState:
     scores: dict[str, SupplierScore] = field(default_factory=dict)
     raised: set[tuple[str, str, int | None]] = field(default_factory=set)
 
+    _index: dict[tuple[str, str], int] = field(default_factory=dict, repr=False)
+
     def event_index(self) -> dict[tuple[str, str], int]:
-        return {(e.source, e.source_id): i for i, e in enumerate(self.events)}
+        """Event key to position. Built once and kept: callers add their new keys to the returned dict, and a
+        length mismatch (an event added another way) rebuilds it. Rebuilding on every call made ingestion quadratic."""
+        if len(self._index) != len(self.events):
+            self._index = {(e.source, e.source_id): i for i, e in enumerate(self.events)}
+        return self._index
 
 
 class EventPipeline:

@@ -52,33 +52,33 @@ def subclass_closure_sql(roots: list[str], triples: str) -> str:
         WHERE s.predicate = '{SUBCLASS_OF}'
     )
     SELECT qid FROM classes
-    """
+    """  # nosec B608
 
 
 def build(source: Path, out: Path = OUT) -> dict[str, int]:
     log = setup_logging("build_wikidata_subset")
     out.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect()
-    con.execute(f"CREATE VIEW triples AS SELECT * FROM read_parquet('{source}/triples/*.parquet')")
-    con.execute(f"CREATE VIEW labels AS SELECT * FROM read_parquet('{source}/labels/*.parquet')")
+    con.execute(f"CREATE VIEW triples AS SELECT * FROM read_parquet('{source}/triples/*.parquet')")  # nosec B608
+    con.execute(f"CREATE VIEW labels AS SELECT * FROM read_parquet('{source}/labels/*.parquet')")  # nosec B608
     con.execute(f"CREATE TABLE classes AS {subclass_closure_sql(CLASS_ROOTS, 'triples')}")
     con.execute(
         f"""CREATE TABLE company_ids AS
         SELECT DISTINCT subject AS qid FROM triples
-        WHERE predicate = '{INSTANCE_OF}' AND object IN (SELECT qid FROM classes)"""
+        WHERE predicate = '{INSTANCE_OF}' AND object IN (SELECT qid FROM classes)"""  # nosec B608
     )
     exports = {
         "companies": """SELECT c.qid, l.label AS label_en, l.description AS description_en
                         FROM company_ids c LEFT JOIN labels l ON l.id = c.qid AND l.lang = 'en'""",
         "aliases": """SELECT c.qid, l.lang, unnest(l.aliases) AS alias
                       FROM company_ids c JOIN labels l ON l.id = c.qid""",
-        "identifiers": "SELECT c.qid, "
+        "identifiers": "SELECT c.qid, "  # nosec B608
         + ", ".join(
             f"max(CASE WHEN t.predicate = '{p}' THEN t.object END) AS {name}"
             for name, p in IDENTIFIER_PROPS.items()
         )
         + " FROM company_ids c LEFT JOIN triples t ON t.subject = c.qid GROUP BY c.qid",
-        "relations": "SELECT t.subject AS qid, t.predicate AS property, t.object AS target_qid "
+        "relations": "SELECT t.subject AS qid, t.predicate AS property, t.object AS target_qid "  # nosec B608
         "FROM triples t JOIN company_ids c ON c.qid = t.subject WHERE t.predicate IN ("
         + ", ".join(f"'{p}'" for p in RELATION_PROPS.values())
         + ")",
@@ -87,12 +87,12 @@ def build(source: Path, out: Path = OUT) -> dict[str, int]:
     for name, query in exports.items():
         dest = out / f"{name}.parquet"
         con.execute(f"COPY ({query}) TO '{dest}' (FORMAT PARQUET)")
-        counts[name] = int(con.execute(f"SELECT count(*) FROM read_parquet('{dest}')").fetchall()[0][0])
+        counts[name] = int(con.execute(f"SELECT count(*) FROM read_parquet('{dest}')").fetchall()[0][0])  # nosec B608
         record_file("wikidata", dest, str(source))
         log.info("wrote %s: %d rows", dest.name, counts[name])
     qid_map = out / "qid_map.parquet"
     con.execute(
-        f"COPY (SELECT qid, lei, cik FROM read_parquet('{out / 'identifiers.parquet'}') "
+        f"COPY (SELECT qid, lei, cik FROM read_parquet('{out / 'identifiers.parquet'}') "  # nosec B608
         f"WHERE lei IS NOT NULL OR cik IS NOT NULL) TO '{qid_map}' (FORMAT PARQUET)"
     )
     record_file("wikidata", qid_map, str(source))

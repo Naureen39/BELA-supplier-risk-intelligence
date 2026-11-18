@@ -15,7 +15,7 @@ from app.resolution.rollup import (
 def _edges(conn: Any, ids: list[int], by: str) -> list[tuple[int, int]]:
     col, other = ("child_id", "parent_id") if by == "child" else ("parent_id", "child_id")
     rows = conn.execute(
-        f"SELECT parent_id, child_id FROM company_relationships WHERE {col} = ANY(%s) "
+        f"SELECT parent_id, child_id FROM company_relationships WHERE {col} = ANY(%s) "  # nosec B608
         f"AND rel_type IN ('direct_parent','subsidiary','owned_by')", (ids,)).fetchall()
     return [(r["parent_id"], r["child_id"]) for r in rows]
 

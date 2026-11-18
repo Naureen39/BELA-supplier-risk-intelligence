@@ -13,6 +13,7 @@ import httpx
 import structlog
 
 from app.container import Container
+from app.core.resilience import dead_letter, retry_call
 
 log = structlog.get_logger()
 MANAGER_ROLES = ("manager", "tenant_admin")
@@ -49,6 +50,14 @@ class Notifier:
              detail: str | None = None) -> None:
         conn.execute("INSERT INTO alert_deliveries (alert_id, rule_id, channel, status, detail) "
                      "VALUES (%s,%s,%s,%s,%s)", (alert_id, rule_id, channel, status, (detail or "")[:300]))
+
+    def redeliver_webhook(self, url: str, body: dict[str, Any]) -> None:
+        """Send a stored webhook again with the same safety checks. Raises when it still fails."""
+        self._url_check(url)
+        r = retry_call(lambda: self._http.post(url, json=body), attempts=self._attempts, sleep=self._sleep,
+                       retry_on=(httpx.HTTPError,))
+        if r.status_code >= 300:
+            raise RuntimeError(f"status {r.status_code}")
 
     def dispatch(self, tenant_id: str, alert_ids: list[str]) -> None:
         if not alert_ids:
@@ -88,6 +97,8 @@ class Notifier:
             self._log(conn, str(a["id"]), rid, "email", "sent", f"{len(recipients)} recipients")
         except Exception as exc:
             self._log(conn, str(a["id"]), rid, "email", "failed", type(exc).__name__)
+            dead_letter(self.c.db, "email", type(exc).__name__, reference=f"{a['id']}:{rid}",
+                        payload={"to": recipients, "subject": "New supplier risk alert", "body": body})
 
     def _webhook(self, conn: Any, a: dict[str, Any], rid: str | None, url: str | None) -> None:
         if not url:
@@ -117,3 +128,4 @@ class Notifier:
             if attempt + 1 < self._attempts:
                 self._sleep(0.5 * 2**attempt)
         self._log(conn, str(a["id"]), rid, "webhook", "failed", last)
+        dead_letter(self.c.db, "webhook", last, reference=f"{a['id']}:{rid}", payload={"url": url, "body": payload})

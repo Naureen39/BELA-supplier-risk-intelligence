@@ -14,7 +14,8 @@
     "e2e": "playwright test",
     "images": "node scripts/optimize-images.mjs",
     "quality": "node scripts/quality.mjs",
-    "geo": "node scripts/build-geo.mjs"
+    "geo": "node scripts/build-geo.mjs",
+    "audit:gate": "node scripts/audit-gate.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",

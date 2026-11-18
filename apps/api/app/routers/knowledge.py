@@ -136,11 +136,16 @@ def company_search(q: str = Query(min_length=2, max_length=120), limit: int = 20
     from app.kb.normalize import normalize_name
 
     norm = normalize_name(q)
+    # Three index-friendly arms instead of one OR (an OR across a trigram match, a prefix, and a ticker
+    # forced a sequential scan of every company): trigram similarity, name prefix, and exact ticker.
+    cols = "id, canonical_name, normalized_name, cik, lei, wikidata_qid, tickers, hq_city, hq_state, is_public"
     rows = conn.execute(
         "SELECT id, canonical_name, cik, lei, wikidata_qid, tickers, hq_city, hq_state, is_public, "
-        "similarity(normalized_name, %s) AS score FROM companies WHERE normalized_name %% %s "
-        "OR normalized_name LIKE %s || '%%' OR upper(%s) = ANY(tickers) "
-        "ORDER BY score DESC, id LIMIT %s", (norm, norm, norm, q, min(max(limit, 1), 50))).fetchall()
+        "similarity(normalized_name, %s) AS score FROM ("
+        f" (SELECT {cols} FROM companies WHERE normalized_name %% %s)"  # nosec B608
+        f" UNION (SELECT {cols} FROM companies WHERE normalized_name LIKE %s || '%%' LIMIT 100)"  # nosec B608
+        f" UNION (SELECT {cols} FROM companies WHERE tickers @> ARRAY[upper(%s)])"  # nosec B608
+        ") t ORDER BY score DESC, id LIMIT %s", (norm, norm, norm, q, min(max(limit, 1), 50))).fetchall()
     return {"items": [jsonable(r) for r in rows]}
 
 

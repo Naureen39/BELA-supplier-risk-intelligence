@@ -70,7 +70,7 @@ def mention_rows(
     negatives: int = 5,
 ) -> list[dict[str, Any]]:
     """Structured-record mentions in BLINK format (context_left, mention, context_right, label)."""
-    rng = random.Random(f"{seed}:{sorted(company_ids)[:3]}:{len(company_ids)}")
+    rng = random.Random(f"{seed}:{sorted(company_ids)[:3]}:{len(company_ids)}")  # nosec B311
     rows: list[dict[str, Any]] = []
     for cid in sorted(company_ids):
         rec = catalog.by_id[cid]

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.container import Container
+from app.core.resilience import dead_letter
 from app.resolution.catalog import Catalog, load_catalog
 from app.resolution.fitting import load_models
 from app.resolution.models import QueryRecord, Resolution, Route
@@ -141,6 +142,9 @@ def status_for(route: Route) -> str:
             Route.REVIEW: "needs_review", Route.NIL: "unresolved"}[route]
 
 
+BATCH = 100
+
+
 def process_upload(c: Container, tenant_id: str, upload_id: str) -> None:
     """Resolve every pending supplier of an upload, create reviews, and update counters."""
     resolver = get_resolver(c)
@@ -150,31 +154,44 @@ def process_upload(c: Container, tenant_id: str, upload_id: str) -> None:
             rows = conn.execute(
                 "SELECT id, attributes FROM suppliers WHERE upload_id = %s AND tenant_id = %s "
                 "AND status = 'pending' ORDER BY created_at, id", (upload_id, tenant_id)).fetchall()
-        for i, row in enumerate(rows, start=1):
-            res = resolver.resolve(to_query(str(row["id"]), row["attributes"]))
-            status = status_for(res.route)
-            counts[status] += 1
-            detail = {"method": res.method, "route": res.route.value, "margin": res.margin,
-                      "config_version": res.config_version, "degraded": res.degraded}
+            done = conn.execute("SELECT auto_resolved, needs_review, unresolved FROM supplier_uploads WHERE id = %s",
+                                (upload_id,)).fetchone()
+            if done:  # a retry continues the counts of the earlier run
+                counts = {k: int(done[k] or 0) for k in counts}
+        # One transaction per batch of rows instead of one per row: a failure rolls back only the current batch,
+        # and the rows in it stay pending, so a retry continues where this run stopped.
+        for start in range(0, len(rows), BATCH):
+            batch = rows[start:start + BATCH]
+            results = [(row, resolver.resolve(to_query(str(row["id"]), row["attributes"]))) for row in batch]
+            batch_counts = dict.fromkeys(counts, 0)
             with c.db.system() as conn:
-                conn.execute(
-                    "UPDATE suppliers SET status = %s, resolved_company_id = %s, confidence = %s, "
-                    "resolution_detail = %s::jsonb WHERE id = %s AND tenant_id = %s",
-                    (status, res.company_id if status == "auto_resolved" else None,
-                     min(max(res.probability, 0.0), 1.0), json.dumps(detail), row["id"], tenant_id))
-                if status == "needs_review":
+                for row, res in results:
+                    status = status_for(res.route)
+                    batch_counts[status] += 1
+                    detail = {"method": res.method, "route": res.route.value, "margin": res.margin,
+                              "config_version": res.config_version, "degraded": res.degraded}
                     conn.execute(
-                        "INSERT INTO resolution_reviews (tenant_id, supplier_id, candidates) "
-                        "VALUES (%s,%s,%s::jsonb)",
-                        (tenant_id, row["id"],
-                         json.dumps(resolution_view(res, resolver.catalog)["candidates"], default=str)))
-                if i % 100 == 0:
-                    _progress(conn, upload_id, counts, "processing")
+                        "UPDATE suppliers SET status = %s, resolved_company_id = %s, confidence = %s, "
+                        "resolution_detail = %s::jsonb WHERE id = %s AND tenant_id = %s",
+                        (status, res.company_id if status == "auto_resolved" else None,
+                         min(max(res.probability, 0.0), 1.0), json.dumps(detail), row["id"], tenant_id))
+                    if status == "needs_review":
+                        conn.execute(
+                            "INSERT INTO resolution_reviews (tenant_id, supplier_id, candidates) "
+                            "VALUES (%s,%s,%s::jsonb)",
+                            (tenant_id, row["id"],
+                             json.dumps(resolution_view(res, resolver.catalog)["candidates"], default=str)))
+                for k, v in batch_counts.items():
+                    counts[k] += v
+                _progress(conn, upload_id, counts, "processing")
         with c.db.system() as conn:
             _progress(conn, upload_id, counts, "complete")
-    except Exception:
+    except Exception as exc:
         with c.db.system() as conn:
             conn.execute("UPDATE supplier_uploads SET status = 'failed' WHERE id = %s", (upload_id,))
+        # Only pending rows are processed, so a retry continues where this run stopped.
+        dead_letter(c.db, "upload", type(exc).__name__, tenant_id=tenant_id, reference=upload_id,
+                    payload={"upload_id": upload_id})
         raise
 
 

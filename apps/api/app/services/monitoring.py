@@ -73,17 +73,26 @@ async def recompute_tenant(c: Container, tenant_id: str, now: datetime | None = 
         seeds = sorted({int(s["cid"]) for s in suppliers} | {cid for link in links for cid in link})
         graph = CorporateGraph(load_edges(conn, seeds, cfg.max_depth))
         rules = _rules(conn)
+        # One pass over the clusters, then each supplier looks up only the companies that can reach it.
+        cluster_info: list[tuple[int, bool]] = []
+        by_company: dict[int, list[tuple[int, float]]] = defaultdict(list)
+        for ci, cl in enumerate(clusters):
+            conf: dict[int, float] = {}
+            for i in cl.members:
+                for cid, score in links[i].items():
+                    conf[cid] = max(conf.get(cid, 0.0), score)
+            cluster_info.append((representative(events, cl),
+                                 any(events[i].source_class == REGULATOR for i in cl.members)))
+            for cid, link_conf in conf.items():
+                by_company[cid].append((ci, link_conf))
+        position = {event_id: i for i, event_id in enumerate(ids)}
         for sup in suppliers:
             scored: list[ScoredEvent] = []
-            for cl in clusters:
-                rep_i = representative(events, cl)
-                conf: dict[int, float] = {}
-                for i in cl.members:
-                    for cid, score in links[i].items():
-                        conf[cid] = max(conf.get(cid, 0.0), score)
-                is_reg = any(events[i].source_class == REGULATOR for i in cl.members)
-                for cid, link_conf in conf.items():
-                    for p in graph.reach(cid, [int(sup["cid"])], cfg.max_depth):
+            sup_cid = int(sup["cid"])
+            for cid in sorted(graph.event_sources(sup_cid, cfg.max_depth)):
+                for ci, link_conf in by_company.get(cid, ()):
+                    rep_i, is_reg = cluster_info[ci]
+                    for p in graph.reach(cid, [sup_cid], cfg.max_depth):
                         scored.append(ScoredEvent(
                             event_id=ids[rep_i], category=events[rep_i].event_type,
                             severity=events[rep_i].severity,
@@ -111,7 +120,7 @@ async def recompute_tenant(c: Container, tenant_id: str, now: datetime | None = 
             for comp in current.components:
                 if comp.event_id in prev_events:
                     continue
-                ev = events[ids.index(comp.event_id)]
+                ev = events[position[comp.event_id]]
                 facts.append(EventFacts(comp.event_id, ev.event_type, ev.severity, ev.state))
             for d in draft_alerts(SupplierFacts(str(sup["id"]), sup["tier"]), previous, current, facts,
                                   rules):

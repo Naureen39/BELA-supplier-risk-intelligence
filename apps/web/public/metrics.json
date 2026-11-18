@@ -1,0 +1,41 @@
+{
+  "data": "SYNTHETIC held-out company split (no gold set available yet; not a gold result)",
+  "records": 6497,
+  "config": "resolution_config_v1",
+  "config_status": "provisional",
+  "systems": {
+    "fellegi_sunter_only": {
+      "accuracy@1": 0.978838665989504,
+      "recall@5": 0.999661418655832,
+      "precision": 1.0,
+      "recall": 0.3932622312510581,
+      "false_links_per_1000": 0.0,
+      "nil_f1": 0.24769101595298068,
+      "review_rate": 0.550561797752809,
+      "p50_ms": 2.3326660157181323,
+      "p95_ms": 2.729591995012015
+    },
+    "hybrid_trigram_only": {
+      "accuracy@1": 0.978838665989504,
+      "recall@5": 0.999661418655832,
+      "precision": 1.0,
+      "recall": 0.3932622312510581,
+      "false_links_per_1000": 0.0,
+      "nil_f1": 0.24769101595298068,
+      "review_rate": 0.550561797752809,
+      "p50_ms": 2.278582949656993,
+      "p95_ms": 2.5955332326702774
+    },
+    "rapidfuzz_state_blocking": {
+      "accuracy@1": 0.9658032842390384,
+      "recall@5": 0.9976299305908245,
+      "precision": 0.9794772089004105,
+      "recall": 0.7675639072287117,
+      "false_links_per_1000": 14.62213329228875,
+      "nil_f1": 0.48006509357200977,
+      "review_rate": null,
+      "p50_ms": 1.724792004097253,
+      "p95_ms": 18.047292006667703
+    }
+  }
+}

@@ -49,7 +49,7 @@ def _copy(conn: Any, path: Path, table: str, columns: str) -> int:
             f"COPY {table} ({columns}) FROM STDIN WITH (FORMAT csv, HEADER true, NULL '')") as cp:
         while chunk := fh.read(1 << 20):
             cp.write(chunk)
-    return int(conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"])
+    return int(conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"])  # nosec B608
 
 
 def _plans(conn: Any, path: Path) -> int:
@@ -76,10 +76,10 @@ def load_business_data(conn: Any, directory: Path = DEFAULT_DIR) -> dict[str, in
         ids = [r["id"] for r in csv.DictReader(fh)]
     conn.execute("DELETE FROM tenants WHERE id = ANY(%s::uuid[])", (ids,))
     for table in GLOBAL_TABLES:
-        conn.execute(f"DELETE FROM {table}")
+        conn.execute(f"DELETE FROM {table}")  # nosec B608
     for fname, table, columns in COPY_PLAN:
         _copy(conn, directory / fname, table, columns)
-        counts[table] = int(conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"])
+        counts[table] = int(conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"])  # nosec B608
     conn.execute("CREATE TEMP TABLE stage_lines (tenant_id uuid, period_month date, line_type text, "
                  "description text, amount numeric(12,2)) ON COMMIT DROP")
     _copy(conn, directory / "invoice_lines.csv", "stage_lines",

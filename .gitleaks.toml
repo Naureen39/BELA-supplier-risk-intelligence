@@ -1,0 +1,15 @@
+# Findings reviewed on 2026-11-18. Every match was a false positive:
+# - a throwaway password used only by the test fixtures and the end-to-end seed (it is created in a database
+#   that exists for the duration of a test run),
+# - a column name (p50_latency_ms) that looks like a key.
+title = "provenance-risk gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Reviewed false positives"
+regexes = [
+  '''Violet-Harbor-Quartz-7421''',
+  '''p50_latency_ms''',
+]

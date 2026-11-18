@@ -21,6 +21,10 @@ const INDUSTRIES = [
   "Other",
 ];
 
+// Zod probes for code generation with new Function, which a strict content security policy reports as a violation.
+// The interpreted path is fast enough for a form.
+z.config({ jitless: true });
+
 const schema = z.object({
   name: z.string().trim().min(1, "Enter your name").max(120),
   work_email: z.string().trim().email("Enter a valid work email"),

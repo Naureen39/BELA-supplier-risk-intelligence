@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
-      - run: pip install -e . pypdf pytest pytest-cov ruff mypy types-PyYAML pip-audit
+      - run: pip install -e . pypdf pytest pytest-cov ruff mypy types-PyYAML pip-audit bandit
       - run: python infra/ci/check_no_em_dash.py
       - run: ruff check apps data tests infra training services
       - run: mypy -p data.scripts
@@ -32,6 +32,7 @@ jobs:
       - run: python -m training.train --dry-run
       - run: PYTHONPATH=.:apps/api pytest --cov=app --cov-fail-under=80
       - run: pip-audit
+      - run: bandit -q -r apps/api/app data services training -x '*/tests/*'
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -54,7 +55,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm audit --audit-level=high
+      - run: npm run audit:gate
 
   web-e2e:
     runs-on: ubuntu-latest
@@ -91,6 +92,8 @@ jobs:
           VALKEY_URL: redis://localhost:6379/0
           COOKIE_SECURE: "false"
           ALLOW_EPHEMERAL_SECRETS: "true"
+          RATE_LIMIT_LOGIN_ACCOUNT: 1000/900
+          RATE_LIMIT_LOGIN_IP: 1000/60
           WEB_BASE_URL: http://127.0.0.1:3000
       - working-directory: apps/web
         run: |
@@ -100,3 +103,16 @@ jobs:
           npm run e2e
         env:
           API_ORIGIN: http://127.0.0.1:8000
+
+  filesystem-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          skip-dirs: apps/web/node_modules
+          ignore-unfixed: true
+          exit-code: "1"

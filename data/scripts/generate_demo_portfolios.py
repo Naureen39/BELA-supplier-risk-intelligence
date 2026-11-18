@@ -100,7 +100,7 @@ def generate(catalog: list[dict[str, Any]], count: int = 5, out_dir: Path = OUT_
     out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for i in range(1, count + 1):
-        rng = random.Random(seed * 1000 + i)
+        rng = random.Random(seed * 1000 + i)  # nosec B311
         rows, answers = build_portfolio(catalog, rng, size)
         path = out_dir / f"portfolio_{i:02d}.csv"
         with path.open("w", newline="", encoding="utf-8") as fh:

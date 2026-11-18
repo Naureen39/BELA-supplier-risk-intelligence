@@ -131,13 +131,16 @@ def upload_get(upload_id: str, p: Principal = Depends(viewer), conn: Any = deps.
 
 
 # ------------------------------------------------------------------ suppliers
-_SUPPLIER_SELECT = (
-    "SELECT s.id, s.uploaded_name, s.tier, s.status, s.confidence, s.created_at, "
-    "s.resolved_company_id, co.canonical_name AS company_name, rs.score AS risk_score, "
-    "rs.level AS risk_level, (s.identifiers_encrypted IS NOT NULL) AS has_sensitive_identifiers "
-    "FROM suppliers s LEFT JOIN companies co ON co.id = s.resolved_company_id "
-    "LEFT JOIN LATERAL (SELECT score, level FROM risk_scores r WHERE r.supplier_id = s.id "
-    "ORDER BY computed_at DESC, id DESC LIMIT 1) rs ON true ")
+_COLUMNS = ("s.id, s.uploaded_name, s.tier, s.status, s.confidence, s.created_at, s.resolved_company_id, "
+            "co.canonical_name AS company_name, rs.score AS risk_score, rs.level AS risk_level, "
+            "(s.identifiers_encrypted IS NOT NULL) AS has_sensitive_identifiers ")
+_JOINS = ("LEFT JOIN companies co ON co.id = s.resolved_company_id "
+          "LEFT JOIN LATERAL (SELECT score, level FROM risk_scores r WHERE r.supplier_id = s.id "
+          "ORDER BY computed_at DESC, id DESC LIMIT 1) rs ON true ")
+_FILTERS = ("AND (%s OR s.duplicate_of IS NULL) "
+            "AND (%s::text IS NULL OR s.status = %s) AND (%s::text IS NULL OR s.tier = %s) "
+            "AND (%s::text IS NULL OR s.uploaded_name ILIKE '%%' || %s || '%%') "
+            "AND (%s::text IS NULL OR (s.created_at, s.id) < (%s::timestamptz, %s::uuid)) ")
 
 
 @router.get("/suppliers", summary="List suppliers")
@@ -148,15 +151,22 @@ def suppliers(cursor: str | None = None, limit: int = 50, status: str | None = N
               conn: Any = deps.TENANT_DB, c: Container = Depends(deps.get_container)
               ) -> Any:
     pos, lim = keyset(c, cursor, limit)
-    rows = conn.execute(
-        _SUPPLIER_SELECT + "WHERE (%s OR s.duplicate_of IS NULL) "
-        "AND (%s::text IS NULL OR s.status = %s) AND (%s::text IS NULL OR s.tier = %s) "
-        "AND (%s::text IS NULL OR s.uploaded_name ILIKE '%%' || %s || '%%') "
-        "AND (%s::text IS NULL OR rs.level = %s) "
-        "AND (%s::text IS NULL OR (s.created_at, s.id) < (%s::timestamptz, %s::uuid)) "
-        "ORDER BY s.created_at DESC, s.id DESC LIMIT %s",
-        (include_duplicates, status, status, tier, tier, q, q, risk_level, risk_level, pos and pos[0], pos and pos[0],
-         pos and pos[1], lim + 1)).fetchall()
+    t = p.tenant_id  # None for a platform administrator without a tenant header: they read across tenants
+    same = "s.tenant_id = %s " if t else "%s::uuid IS NULL "
+    args = (t, include_duplicates, status, status, tier, tier, q, q, pos and pos[0], pos and pos[0], pos and pos[1])
+    # The tenant condition repeats what row level security enforces. Row level security alone is an OR with a
+    # function call, which the planner cannot turn into an index condition: it scored all of a tenant's suppliers
+    # before sorting. With the explicit condition the newest page comes straight from the index.
+    if risk_level is None:
+        rows = conn.execute(
+            f"SELECT {_COLUMNS} FROM (SELECT * FROM suppliers s WHERE {same}{_FILTERS}"  # nosec B608
+            "ORDER BY s.created_at DESC, s.id DESC LIMIT %s) s " + _JOINS + "ORDER BY s.created_at DESC, s.id DESC",
+            (*args, lim + 1)).fetchall()
+    else:  # the risk level lives on the latest score, so it must be joined before the page is cut
+        rows = conn.execute(
+            f"SELECT {_COLUMNS} FROM suppliers s " + _JOINS + f"WHERE {same}{_FILTERS}"  # nosec B608
+            "AND rs.level = %s ORDER BY s.created_at DESC, s.id DESC LIMIT %s",
+            (*args, risk_level, lim + 1)).fetchall()
     if format == "csv":
         body = to_csv(["id", "supplier", "canonical_company_id", "canonical_company", "status",
                        "confidence", "tier", "risk_score", "risk_level"],
@@ -185,7 +195,8 @@ def supplier_create(body: SupplierIn, p: Principal = Depends(operator),
         "confidence, resolution_detail) VALUES (%s,%s,%s::jsonb,%s,%s,%s,%s,%s::jsonb) RETURNING id",
         (t, body.name, json.dumps(attrs), body.tier, status,
          res.company_id if status == "auto_resolved" else None, min(max(res.probability, 0), 1),
-         json.dumps({"method": res.method, "route": res.route.value}))).fetchone()
+         json.dumps({"method": res.method, "route": res.route.value, "margin": res.margin,
+                    "config_version": res.config_version, "degraded": res.degraded}))).fetchone()
     if status == "needs_review":
         conn.execute("INSERT INTO resolution_reviews (tenant_id, supplier_id, candidates) "
                      "VALUES (%s,%s,%s::jsonb)",

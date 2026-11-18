@@ -20,7 +20,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--mewsli", action="store_true")
     args = parser.parse_args(argv)
     for lang in args.cc_news_langs:
-        snapshot_download(
+        snapshot_download(  # nosec B615
             "intfloat/multilingual_cc_news",
             repo_type="dataset",
             allow_patterns=f"{lang}/*.parquet",
@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> None:
         )
         log.info("cc_news slice %s downloaded", lang)
     if args.mewsli:
-        snapshot_download(
+        snapshot_download(  # nosec B615
             "izhx/mewsli-x", repo_type="dataset", local_dir=RAW_DIR / "eval" / "mewsli_x"
         )
         log.info("mewsli-x downloaded")

@@ -56,7 +56,7 @@ export default async function MethodologyPage() {
           className="overflow-x-auto"
           tabIndex={0}
           role="region"
-          aria-label="Table, scrolls horizontally on small screens"
+          aria-label="Data sources, scrolls horizontally on small screens"
         >
           <table className="w-full min-w-[640px] border-collapse text-left text-[15px]">
             <caption className="sr-only">Data sources, what they provide, and their terms</caption>
@@ -172,7 +172,7 @@ export default async function MethodologyPage() {
               className="overflow-x-auto"
               tabIndex={0}
               role="region"
-              aria-label="Table, scrolls horizontally on small screens"
+              aria-label="Evaluation results, scrolls horizontally on small screens"
             >
               <table className="w-full min-w-[480px] border-collapse text-left text-[15px]">
                 <caption className="sr-only">Evaluation results by system</caption>
@@ -183,6 +183,12 @@ export default async function MethodologyPage() {
                     </th>
                     <th scope="col" className="px-4 py-3">
                       Precision of accepted matches
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Matched automatically
+                    </th>
+                    <th scope="col" className="px-4 py-3">
+                      Sent to review
                     </th>
                     <th scope="col" className="px-4 py-3">
                       False links per 1,000
@@ -199,6 +205,12 @@ export default async function MethodologyPage() {
                         {s.precision != null ? `${(s.precision * 100).toFixed(1)}%` : "n/a"}
                       </td>
                       <td className="px-4 py-3">
+                        {s.recall != null ? `${(s.recall * 100).toFixed(1)}%` : "n/a"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {s.review_rate != null ? `${(s.review_rate * 100).toFixed(1)}%` : "n/a"}
+                      </td>
+                      <td className="px-4 py-3">
                         {s.false_links_per_1000 != null ? s.false_links_per_1000.toFixed(1) : "n/a"}
                       </td>
                     </tr>
@@ -206,6 +218,15 @@ export default async function MethodologyPage() {
                 </tbody>
               </table>
             </div>
+            <p className="mt-4 max-w-3xl text-[15px] leading-7 text-slate-700">
+              How to read this: precision counts only the matches the system accepted by itself, and
+              a cautious system can reach a perfect score by accepting few. The columns beside it
+              show the share matched automatically and the share sent to a person. A baseline that
+              accepts more matches makes more mistakes.{" "}
+              {(ev.data ?? "").toLowerCase().includes("synthetic")
+                ? "These figures come from a synthetic split built from fictional company names, so they show how the pipeline behaves on that kind of noise. They are not results on real supplier data, and the thresholds are provisional."
+                : ""}
+            </p>
           </>
         ) : (
           <p className="max-w-3xl text-[17px] leading-8 text-slate-800">
