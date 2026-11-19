@@ -28,6 +28,15 @@ dependencies = [
   "prometheus-client",
   "weasyprint",
   "statsmodels",
+  "argon2-cffi",
+  "cryptography",
+  "PyJWT",
+  "pyotp",
+  "psycopg-pool",
+  "python-multipart",
+  "redis",
+  "structlog",
+  "zxcvbn",
 ]
 
 [project.optional-dependencies]

@@ -12,8 +12,8 @@ running application on a development machine. It is not a penetration test and i
 | npm audit | `apps/web` | 17 findings, all one advisory (picomatch, GHSA-fc5q-39xc-vjpf, denial of service through crafted glob patterns). No patched release exists: 4.0.7 is the latest and is affected. Reviewed and allowed with an expiry date (see below). |
 | Trivy (filesystem: vulnerabilities, secrets, misconfiguration) | the repository without `node_modules` and the virtual environment | The same single picomatch advisory in `package-lock.json`. Nothing else at high or critical. |
 | gitleaks | the full git history (8 commits at the time) | 6 matches, all false positives (a throwaway test password and a column name). Allowlisted in `.gitleaks.toml` with the reason. 0 leaks after the allowlist. |
-| OWASP ZAP baseline | **not run** | It needs the stack in containers. There is no Docker here and no container images exist yet (Phase 11). The browser tests under "Checks I could run instead" cover part of what the baseline looks for, not all of it. |
-| Trivy image scan | **not run** | No images exist yet. |
+| OWASP ZAP baseline | **not run** | It needs the stack in containers. There is no Docker here; the compose stack now exists (Phase 11) so it can be run against `https://localhost`. The browser tests under "Checks I could run instead" cover part of what the baseline looks for, not all of it. |
+| Trivy image scan | **not run locally** | No Docker here. The CI `packaging` job scans both images (report only, it does not fail the build yet). |
 
 ### Bandit notes
 
@@ -65,7 +65,7 @@ test), **partial**, **not done**.
 | API keys hashed, scoped, shown once, expiring | verified | `test_auth.py`, `test_rbac.py`, administration end-to-end test |
 | Role matrix on the server, every role against every endpoint group | verified | `test_rbac.py` |
 | Row level security and cross-tenant tests, through the API and through SQL | verified | `test_rbac.py`, `test_workflows.py`, and the per-phase tests |
-| TLS 1.2 or higher with HSTS | partial | HSTS is sent by the site and by the API when enabled. TLS itself is terminated by a reverse proxy (Caddy) that is set up in Phase 11. |
+| TLS 1.2 or higher with HSTS | partial | HSTS is sent by the site and by the API when enabled. TLS terminates at Caddy (`infra/caddy/Caddyfile`, Caddy's default minimum is TLS 1.2). The proxy has not been started, so the configuration is unverified (the CI `packaging` job starts it and checks the response headers). |
 | Encrypted disk volumes for the database host | not done | An infrastructure setting; nothing to verify on a development machine. |
 | pgcrypto encryption of tenant identifiers | implemented | `routers/suppliers.py`; the list endpoint reports only whether identifiers exist, and exports leave them out. |
 | Tenant lists never used to train without a setting; feedback stripped of tenant ids | verified | `test_workflows.py` |
@@ -75,8 +75,8 @@ test), **partial**, **not done**.
 | Hash-chained, append-only audit log, verification | verified | `test_workflows.py`; the restore drill verifies the chain on a restored copy. |
 | Upload limits, formula injection protection, content type checks | verified | `test_workflows.py`, and `tests/app-lib.test.ts` for the browser-side CSV export |
 | Security headers; CORS off by default | verified | Browser tests check the headers; the API has no CORS middleware. The policy keeps `'unsafe-inline'` for scripts and styles (below). |
-| Pinned versions and lock files; Trivy and gitleaks in CI | partial | `package-lock.json` is committed. Python dependencies are not pinned to exact versions and there is no Python lock file. CI runs gitleaks, Trivy, Bandit, pip-audit, and the npm gate. |
-| Non-root containers, read-only file systems, internal networks | not done | No container images exist yet (Phase 11). |
+| Pinned versions and lock files; Trivy and gitleaks in CI | partial | `package-lock.json` is committed. `requirements/api.txt` (Phase 11) pins the direct Python runtime dependencies; transitive versions are not locked. CI runs gitleaks, Trivy (filesystem, and image scans in the `packaging` job), Bandit, pip-audit, and the npm gate. |
+| Non-root containers, read-only file systems, internal networks | implemented, not run | `compose.yaml` runs the API as uid 10001 and the web app as `node`, both read-only with a tmpfs, `no-new-privileges`, the database and cache on an internal network, only Caddy publishing ports. Written without Docker; unverified until the images are built (CI `packaging` job). |
 | Untrusted article text for the model: delimiters, schema-constrained output, no tools | verified | Phase 3 tests (`apps/api/tests/resolution/`) |
 | The model never decides alone; evidence always shown; versions recorded on decisions | verified | Phase 3 and 4 tests; the application shows the candidates and scores |
 | Fetcher safety: private ranges blocked, size and time limits, robots.txt | implemented | `data/scripts/fetch_article_text.py` (no redirects, 20 second timeout, size cap, robots). The webhook sender has its own tested guard. Not covered by an automated test. |
@@ -99,3 +99,14 @@ the main application pages (charts and graph included); a cross-origin request f
 framed; a cookie-authenticated write without the CSRF header gets 403; the session cookie is httpOnly and strict; an
 unauthenticated API request gets 401 with `Cache-Control: no-store`. These are checks of known behavior, not a scan for
 unknown problems.
+
+## Phase 11 notes
+
+- **Demo accounts.** Passwords are random (80 bits), generated per install, printed once, stored only as Argon2id hashes
+  (`infra/demo/seed_demo.py`, covered by a test). The two administrator accounts still go through mandatory multi-factor
+  enrollment. The public demo role is `viewer` (the `view` permission only).
+- **A published viewer password is public by design.** `DEMO_VIEWER_PASSWORD` is compiled into the web bundle when set.
+  Use it only on a demo with synthetic data and keep the rate limits on.
+- **The secrets file.** `.env` holds `DATA_KEY`, the signing key, and the database password. It is created with mode 600, is
+  git-ignored, and is never overwritten.
+- **The API container has no outbound network** in the default compose file, so webhooks and external mail fail closed.

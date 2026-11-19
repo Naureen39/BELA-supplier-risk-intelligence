@@ -1,0 +1,31 @@
+# Direct runtime dependencies of the API, pinned to the versions the test suite ran against (Phase 10, Python 3.14).
+# Transitive dependencies are resolved by pip at build time and are NOT locked: generate a full lock file
+# (pip-compile or uv pip compile) before a production release. See docs/deploy.md.
+alembic==1.20.1
+argon2-cffi==25.1.0
+cleanco==2.3
+cryptography==50.0.2
+fastapi==0.162.2
+httpx==0.28.1
+networkx==3.7
+numpy==2.5.4
+pandas==3.1.1
+pandera==0.35.0
+psycopg[binary]==3.3.8
+psycopg-pool==3.3.3
+pydantic==2.14.3
+PyJWT==2.15.1
+PyOTP==2.10.0
+python-multipart==0.0.33
+PyYAML==6.0.3
+RapidFuzz==3.14.6
+redis==8.1.0
+SQLAlchemy==2.1.8
+starlette==1.10.0
+statsmodels==0.15.0
+structlog==26.1.0
+prometheus_client==0.26.0
+usaddress==0.5.16
+uvicorn==0.54.0
+weasyprint==70.0
+zxcvbn==4.5.0

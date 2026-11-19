@@ -59,14 +59,13 @@ detection, Valkey rate limit and pub/sub, and a smoke run under uvicorn. Coverag
 Not done:
 - **OWASP ZAP baseline scan**: needs the running stack in containers; not run. Trivy, Bandit, and
   gitleaks are also not run locally (only in CI definitions where present).
-- **Load and latency numbers** are Phase 10.
-- **PDF reports** are Phase 6: `POST /reports/*` records the request and returns `queued`.
+- **Load and latency numbers** are in `docs/perf.md` (Phase 10).
+- **PDF reports** were added in Phase 6 (`POST /reports/*`, then `GET /reports/{id}/download`).
 - **Rate limit values, lock durations, and token lifetimes** are defaults, not tuned.
 - Revenue and analytics endpoints are covered in `docs/metrics.md` (Phase 7).
 - Celery scheduling is not wired; `services/alerts.py` and the Phase 4 `recompute` are the functions
   a scheduled task will call.
-- The tenant `retention_days` setting is stored, but no purge job exists yet.
-- API endpoints for corrections, merge-duplicates, and newsletter signup belong to Phase 6 and 8.
+- The tenant `retention_days` setting is enforced by the purge job added in Phase 10 (`docs/runbook.md`); it must be scheduled.
 
 ## Phase 10 additions
 
@@ -78,3 +77,9 @@ Not done:
 - `GET /events/{id}` returns `evidence` and `reaches_suppliers` (Phase 9). Live alerts carry `supplier_name`.
 - The supplier and alert lists add the tenant condition explicitly next to row level security (the explicit condition lets the
   planner use the index; the security guarantee is unchanged and still enforced by the database).
+
+## Phase 11 additions
+
+- `docs/api_guide.md` has runnable curl, Python, and JavaScript examples (checked against the demo).
+- The container stack routes `/api/*` straight to the API through Caddy; the web app's own `/api` rewrite is for development.
+- `JWT_PRIVATE_KEY_PEM` also accepts the key on one line with `\n` escapes, so it fits in an environment file.

@@ -88,8 +88,8 @@ See `PLAN_supplier_risk.md` for the full list. The items that Phase 10 touches:
 |---|---|
 | No open high severity defects | No known high severity defect is open. The one high rated dependency advisory (picomatch) has no patched release and is documented with an expiry. |
 | Performance targets met or documented | Documented in `docs/perf.md`. Model throughput (BELA, BLINK, the language model) is not measured. |
-| Runbook complete | `docs/runbook.md` covers operation, backup and restore (drilled), jobs, and failures. Deployment topology, monitoring, and failover are not covered (Phase 11). |
-| ZAP baseline, Trivy image scan | not run (no containers, no Docker here) |
+| Runbook complete | `docs/runbook.md` covers operation, backup and restore (drilled), jobs, failures, and the container stack. Monitoring dashboards, alert rules, and failover are not covered. |
+| ZAP baseline, Trivy image scan | not run locally (no Docker here); the CI `packaging` job scans the images, and the compose stack makes a ZAP run possible |
 | Screen reader audit | not done |
 | Gold evaluation set | does not exist; the evaluation re-run is synthetic and labeled so |
 | BELA and BLINK spikes | not run, so the neural linking path is unverified |

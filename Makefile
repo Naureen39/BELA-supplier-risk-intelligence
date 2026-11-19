@@ -3,7 +3,7 @@ export PYTHONPATH := .
 # WeasyPrint finds Pango here on macOS with Homebrew; harmless elsewhere.
 export DYLD_FALLBACK_LIBRARY_PATH ?= /opt/homebrew/lib
 
-.PHONY: publish-metrics web-install web-dev web-build web-check web-e2e web-quality demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
+.PHONY: env demo demo-down demo-reset demo-logs demo-credentials-help screenshots models-fetch licenses compose-check publish-metrics web-install web-dev web-build web-check web-e2e web-quality demo-data load-demo-data metrics-refresh demo-portfolios ingest-events eval-events training-data train fit eval services-nel services-blink migrate etl db-test setup data data-edgar data-registry data-regulators data-news data-verify counts test lint check-dash gdelt
 
 setup:
 	python3 -m venv .venv
@@ -125,3 +125,40 @@ api:
 	PYTHONPATH=apps/api:. .venv/bin/uvicorn --factory app.main:create_app --host 127.0.0.1 --port 8000 --reload
 
 # Run the database tests locally: TEST_DATABASE_ADMIN_URL=postgresql+psycopg://user@host/postgres make test
+
+# Phase 11: packaging and the demo. Needs Docker with the compose plugin (v2.23 or newer).
+# `make demo` builds the images, starts the stack behind Caddy (https://localhost), migrates, seeds, and prints the
+# demo account passwords once. Trained checkpoints are not shipped (none exist yet); see docs/deploy.md.
+env:
+	infra/demo/make_env.sh --demo
+
+demo: env
+	docker compose --profile demo up -d --build
+	docker compose --profile demo wait seed
+	@docker compose --profile demo logs --no-log-prefix seed | sed -n '/^upload/,$$p'
+	@echo "Open https://localhost (accept the local certificate, or run: docker compose exec caddy caddy trust)"
+	@echo "Password reset and invitation emails: http://localhost:8025"
+
+demo-logs:
+	docker compose --profile demo logs -f api web caddy
+
+demo-down:
+	docker compose --profile demo down
+
+# Wipes the demo database and volumes, then seeds again with new passwords.
+demo-reset:
+	docker compose --profile demo down -v
+	$(MAKE) demo
+
+models-fetch:
+	$(PY) infra/models/fetch_checkpoints.py
+
+# Captures docs/screenshots from a running site. For application pages add APP_EMAIL and APP_PASSWORD.
+screenshots:
+	cd apps/web && node scripts/screenshots.mjs
+
+licenses:
+	$(PY) infra/licenses.py
+
+compose-check:
+	$(PY) -c "import yaml,sys; yaml.safe_load(open('compose.yaml')); print('compose.yaml parses')"

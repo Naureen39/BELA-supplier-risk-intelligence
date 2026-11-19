@@ -1,0 +1,28 @@
+# TLS terminates here. SITE_ADDRESS=localhost uses Caddy's internal certificate authority (run `docker compose
+# exec caddy caddy trust` or accept the browser warning). A real domain gets a public certificate automatically
+# and needs ports 80 and 443 reachable from the internet.
+{
+	email {$ACME_EMAIL:}
+}
+
+{$SITE_ADDRESS:localhost} {
+	encode zstd gzip
+
+	# Server-sent events (live alerts) must not be buffered. The API sets its own security headers.
+	handle /api/* {
+		reverse_proxy api:8000 {
+			flush_interval -1
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	# The web application sets its own content security policy.
+	handle {
+		reverse_proxy web:3000
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

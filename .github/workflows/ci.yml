@@ -116,3 +116,43 @@ jobs:
           skip-dirs: apps/web/node_modules
           ignore-unfixed: true
           exit-code: "1"
+
+  # Builds both images, starts the whole stack behind Caddy, seeds the demo, and checks it answers over TLS.
+  # This is the first place the container files are exercised (they were written without Docker available).
+  packaging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate secrets and validate the compose file
+        run: |
+          infra/demo/make_env.sh --demo
+          docker compose --profile demo config -q
+      - name: Build, start, and seed
+        run: |
+          docker compose --profile demo up -d --build
+          docker compose --profile demo wait seed
+          docker compose --profile demo logs --no-log-prefix seed | sed 's/[a-z2-9]\{4\}-[a-z2-9]\{4\}-[a-z2-9]\{4\}-[a-z2-9]\{4\}/<password>/'
+      - name: Check the running stack
+        run: |
+          curl -ksf https://localhost/api/v1/health/ready
+          curl -ksf https://localhost/login | grep -q "Demo environment"
+          curl -ksfI https://localhost/ | grep -i "strict-transport-security"
+          curl -ksfI https://localhost/api/v1/health | grep -i "x-content-type-options"
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose --profile demo logs --tail=200
+      - name: Scan the images
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: provenance-api:local
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"
+      - name: Scan the web image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: provenance-web:local
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "0"

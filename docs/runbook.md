@@ -1,8 +1,9 @@
 # Runbook
 
 How to run, check, back up, restore, and repair the platform. Everything here was exercised on a development machine
-with PostgreSQL 17 and Valkey; items that could not be exercised are marked **not tested**. There are no container images
-yet (Phase 11), so the commands start processes directly.
+with PostgreSQL 17 and Valkey; items that could not be exercised are marked **not tested**. The container stack
+(`compose.yaml`, Phase 11) was written without Docker available and has not been started, so it is marked **not run**
+where it matters; the commands below also work with processes started directly.
 
 ## Components
 
@@ -122,9 +123,19 @@ first entry whose hash does not match.
 cursors; there is no overlap period for the old key. Replacing `DATA_KEY` makes existing encrypted values unreadable: there is
 no re-encryption tool (**not built**). Plan a migration before rotating it.
 
+## Containers (`compose.yaml`, see `docs/deploy.md`)
+
+Start: `docker compose up -d --build` (or `make demo`). Stop: `docker compose down` (add `-v` only to delete the data).
+Look at state: `docker compose ps` (health is shown), `docker compose logs -f api`. Logs rotate at 10 MB times 5 files per
+service. Migrations run in the `migrate` service before the API starts, so a deployment is: take a backup, pull or
+rebuild, `docker compose up -d --build`. Backup and restore commands run against the `db` container:
+`docker compose exec db pg_dump -U provenance --format=custom provenance > backup.dump`. The restore drill script needs a
+reachable PostgreSQL; point it at the published port or run it from a container on the `data` network. **Not tested.**
+TLS certificates live in the `caddy_data` volume: keep it, or Caddy asks for new certificates (rate limited) on a rebuild.
+
 ## What is not covered
 
-- Deployment topology, TLS termination, container health checks, and log shipping: Phase 11.
+- Log shipping and central log storage (containers write JSON logs to the host's Docker log files only).
 - Monitoring and alerting: the application exposes health endpoints and structured logs with request identifiers; there are no
   dashboards or alert rules for operators yet.
 - High availability and failover: none.

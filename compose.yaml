@@ -1,0 +1,174 @@
+# Production-style stack: Caddy (TLS) in front of the web app and the API, PostgreSQL with pgvector, Valkey.
+#   make demo                       build, start, migrate, seed, and print the demo accounts
+#   docker compose up -d --build    the same stack without demo data or Mailpit (set the variables in .env first)
+# Written without Docker available: it has been checked as YAML only, not started. See docs/deploy.md.
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+x-service: &service
+  restart: unless-stopped
+  logging: *logging
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  db:
+    <<: *service
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: provenance
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run make env first}
+      POSTGRES_DB: provenance
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U provenance -d provenance"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy: { resources: { limits: { cpus: "2.0", memory: 2g } } }
+    shm_size: 256m
+
+  valkey:
+    <<: *service
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    networks: [data]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy: { resources: { limits: { cpus: "0.5", memory: 384m } } }
+
+  migrate:
+    image: provenance-api:local
+    build: { context: ., dockerfile: infra/docker/api.Dockerfile }
+    command: ["sh", "-c", "cd /srv/apps/api && alembic upgrade head"]
+    environment:
+      DATABASE_URL: postgresql://provenance:${POSTGRES_PASSWORD}@db:5432/provenance
+    depends_on: { db: { condition: service_healthy } }
+    networks: [data]
+    restart: "no"
+    logging: *logging
+
+  api:
+    <<: *service
+    image: provenance-api:local
+    environment: &api-env
+      DATABASE_URL: postgresql://provenance:${POSTGRES_PASSWORD}@db:5432/provenance
+      VALKEY_URL: redis://valkey:6379/0
+      JWT_PRIVATE_KEY_PEM: ${JWT_PRIVATE_KEY_PEM:?run make env first}
+      DATA_KEY: ${DATA_KEY:?run make env first}
+      CURSOR_SECRET: ${CURSOR_SECRET:?run make env first}
+      COOKIE_SECURE: "true"
+      TRUST_PROXY_HEADERS: "true"
+      WEB_BASE_URL: https://${SITE_ADDRESS:-localhost}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      API_WORKERS: ${API_WORKERS:-2}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      valkey: { condition: service_healthy }
+    volumes: ["reports:/var/lib/provenance/reports"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    networks: [edge, data]
+    deploy: { resources: { limits: { cpus: "2.0", memory: 2g } } }
+
+  # Daily jobs: purge expired data (retention policy) and refresh the revenue views. Logs go to this service.
+  jobs:
+    <<: *service
+    image: provenance-api:local
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          python -m app.services.retention || echo "retention failed"
+          python -m app.analytics.loader --refresh-only || echo "metrics refresh failed"
+          sleep 86400
+        done
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    read_only: true
+    tmpfs: ["/tmp"]
+    volumes: ["reports:/var/lib/provenance/reports"]
+    networks: [data]
+    deploy: { resources: { limits: { cpus: "0.5", memory: 512m } } }
+
+  web:
+    <<: *service
+    image: provenance-web:local
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        API_ORIGIN: http://api:8000
+        NEXT_PUBLIC_DEMO_MODE: ${DEMO_MODE:-false}
+        NEXT_PUBLIC_DEMO_VIEWER_PASSWORD: ${DEMO_VIEWER_PASSWORD:-}
+    depends_on: { api: { condition: service_healthy } }
+    read_only: true
+    tmpfs: ["/tmp"]
+    volumes: ["webcache:/web/.next/cache"]
+    networks: [edge]
+    deploy: { resources: { limits: { cpus: "1.0", memory: 768m } } }
+
+  caddy:
+    <<: *service
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: { web: { condition: service_healthy }, api: { condition: service_healthy } }
+    networks: [edge, public]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy: { resources: { limits: { cpus: "0.5", memory: 256m } } }
+
+  # Demo profile: a mail catcher for password reset and invitation emails, and the one-shot seeder.
+  mailpit:
+    <<: *service
+    profiles: [demo]
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8025:8025"]
+    networks: [data]
+    deploy: { resources: { limits: { cpus: "0.25", memory: 128m } } }
+
+  seed:
+    profiles: [demo]
+    image: provenance-api:local
+    entrypoint: ["python", "infra/demo/seed_demo.py"]
+    command:
+      - --database-url=postgresql://provenance:${POSTGRES_PASSWORD}@db:5432/provenance
+      - --api-url=http://api:8000
+      - --web-url=https://${SITE_ADDRESS:-localhost}
+    working_dir: /srv
+    environment: *api-env
+    depends_on: { api: { condition: service_healthy } }
+    networks: [data]
+    restart: "no"
+    logging: *logging
+
+networks:
+  public: {}
+  edge: { internal: true }
+  data: { internal: true }
+
+volumes:
+  pgdata:
+  reports:
+  webcache:
+  caddy_data:
+  caddy_config:

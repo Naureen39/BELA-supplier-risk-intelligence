@@ -41,7 +41,8 @@ class TokenService:
     def __init__(self, settings: Settings) -> None:
         self._s = settings
         if settings.jwt_private_key_pem:
-            key = serialization.load_pem_private_key(settings.jwt_private_key_pem.encode(), None)
+            key = serialization.load_pem_private_key(
+                settings.jwt_private_key_pem.replace("\\n", "\n").encode(), None)  # env files carry one line
             if not isinstance(key, Ed25519PrivateKey):
                 raise RuntimeError("JWT_PRIVATE_KEY_PEM must be an Ed25519 key")
             self._private = key

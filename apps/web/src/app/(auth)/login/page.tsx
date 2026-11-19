@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/marketing/auth-shell";
+import { DemoAccess } from "@/components/marketing/demo-access";
 import { LoginFlow } from "@/components/marketing/login-flow";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function LoginPage() {
       subtitle="Sign in to review matches, monitor suppliers, and read reports."
     >
       <LoginFlow />
+      <DemoAccess />
     </AuthShell>
   );
 }
